@@ -13,7 +13,10 @@ pub enum PluginEventResult {
 
 impl PluginEventResult {
     pub fn is_consumed(self) -> bool {
-        matches!(self, PluginEventResult::Consumed | PluginEventResult::ConsumedRequestRedraw)
+        matches!(
+            self,
+            PluginEventResult::Consumed | PluginEventResult::ConsumedRequestRedraw
+        )
     }
 
     pub fn requests_redraw(self) -> bool {
@@ -29,9 +32,18 @@ pub struct LocustEventOutcome {
 }
 
 impl LocustEventOutcome {
-    pub const NOT_HANDLED: Self = Self { consumed: false, request_redraw: false };
-    pub const CONSUMED: Self = Self { consumed: true, request_redraw: false };
-    pub const CONSUMED_REDRAW: Self = Self { consumed: true, request_redraw: true };
+    pub const NOT_HANDLED: Self = Self {
+        consumed: false,
+        request_redraw: false,
+    };
+    pub const CONSUMED: Self = Self {
+        consumed: true,
+        request_redraw: false,
+    };
+    pub const CONSUMED_REDRAW: Self = Self {
+        consumed: true,
+        request_redraw: true,
+    };
 }
 
 // Tiny compile-time guard that Event is what we expect.

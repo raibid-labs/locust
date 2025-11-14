@@ -1,12 +1,11 @@
-use std::io;
 use crossterm::event::{self, Event, KeyCode};
-use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
-use ratatui::prelude::*;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use ratatui::backend::CrosstermBackend;
+use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem};
+use std::io;
 
-use locust::core::context::{Locust, LocustConfig};
-use locust::plugins::nav::NavPlugin;
+use locust::prelude::*;
 
 fn main() -> io::Result<()> {
     enable_raw_mode()?;
@@ -19,7 +18,7 @@ fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut locust: Locust<_> = Locust::new(LocustConfig::default());
+    let mut locust = Locust::<CrosstermBackend<_>>::new(LocustConfig::default());
     locust.register_plugin(NavPlugin::new());
 
     let items: Vec<ListItem> = (0..20)
@@ -29,7 +28,7 @@ fn main() -> io::Result<()> {
     'outer: loop {
         locust.begin_frame();
         terminal.draw(|f| {
-            let size = f.size();
+            let size = f.area();
             let block = Block::default().title("Locust demo").borders(Borders::ALL);
             f.render_widget(block, size);
 

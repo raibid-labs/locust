@@ -7,11 +7,10 @@
 
 use crate::core::context::LocustContext;
 use crate::core::input::PluginEventResult;
-use crate::core::overlay::OverlayState;
 use crate::core::plugin::LocustPlugin;
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use ratatui::backend::Backend;
-use ratatui::prelude::Frame;
+use ratatui::Frame;
 
 /// Current navigation mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,9 +25,17 @@ pub struct NavPlugin {
     pub mode: NavMode,
 }
 
+impl Default for NavPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NavPlugin {
     pub fn new() -> Self {
-        Self { mode: NavMode::Normal }
+        Self {
+            mode: NavMode::Normal,
+        }
     }
 }
 
@@ -40,15 +47,15 @@ where
         "locust.nav"
     }
 
+    fn priority(&self) -> i32 {
+        50 // Built-in plugin, higher priority than user plugins
+    }
+
     fn init(&mut self, _ctx: &mut LocustContext) {
         // Nothing to do yet; hook exists for future use.
     }
 
-    fn on_event(
-        &mut self,
-        event: &Event,
-        ctx: &mut LocustContext,
-    ) -> PluginEventResult {
+    fn on_event(&mut self, event: &Event, ctx: &mut LocustContext) -> PluginEventResult {
         if let Event::Key(KeyEvent { code, .. }) = event {
             match (self.mode, code) {
                 (NavMode::Normal, KeyCode::Char('f')) => {
@@ -69,19 +76,19 @@ where
         PluginEventResult::NotHandled
     }
 
-    fn render_overlay(&self, frame: &mut Frame<'_, B>, ctx: &LocustContext) {
+    fn render_overlay(&self, frame: &mut Frame, _ctx: &LocustContext) {
         if self.mode != NavMode::Hint {
             return;
         }
 
         // Placeholder: draw a simple banner at the top when in hint mode.
         // Later, this will render per-target hint labels.
-        use ratatui::widgets::{Block, Borders, Paragraph};
         use ratatui::layout::Rect;
         use ratatui::text::{Line, Span};
+        use ratatui::widgets::{Block, Borders, Paragraph};
 
         let area = {
-            let size = frame.size();
+            let size = frame.area();
             Rect {
                 x: size.x,
                 y: size.y,
@@ -90,9 +97,9 @@ where
             }
         };
 
-        let text = Line::from(vec![
-            Span::raw(" Locust: Hint mode active (press Esc to exit) "),
-        ]);
+        let text = Line::from(vec![Span::raw(
+            " Locust: Hint mode active (press Esc to exit) ",
+        )]);
         let para = Paragraph::new(text).block(Block::default().borders(Borders::BOTTOM));
         frame.render_widget(para, area);
     }
