@@ -23,7 +23,7 @@ pub use crate::core::targets::{
 pub use crate::core::overlay::{OverlayLayer, OverlayState};
 
 // Built-in plugins
-pub use crate::plugins::nav::{NavMode, NavPlugin};
+pub use crate::plugins::nav::{NavConfig, NavMode, NavPlugin};
 
 // Re-export commonly used ratatui types
 pub use ratatui::backend::Backend;

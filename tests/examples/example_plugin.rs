@@ -14,6 +14,9 @@ pub struct StatusBarPlugin {
 }
 
 impl StatusBarPlugin {
+    /// Plugin ID constant
+    pub const ID: &'static str = "example.status_bar";
+
     pub fn new() -> Self {
         Self {
             visible: true,
@@ -28,7 +31,7 @@ impl StatusBarPlugin {
 
 impl<B: Backend> LocustPlugin<B> for StatusBarPlugin {
     fn id(&self) -> &'static str {
-        "example.status_bar"
+        Self::ID
     }
 
     fn priority(&self) -> i32 {
@@ -37,7 +40,7 @@ impl<B: Backend> LocustPlugin<B> for StatusBarPlugin {
 
     fn init(&mut self, ctx: &mut LocustContext) {
         // Register the status bar as an overlay layer
-        ctx.overlay.add_layer(OverlayLayer::new(self.id(), 300));
+        ctx.overlay.add_layer(OverlayLayer::new(Self::ID, 300));
         self.message = format!("Initialized at frame {}", ctx.frame_count);
     }
 
@@ -49,7 +52,7 @@ impl<B: Backend> LocustPlugin<B> for StatusBarPlugin {
         }) = event
         {
             self.visible = !self.visible;
-            ctx.overlay.set_layer_visibility(self.id(), self.visible);
+            ctx.overlay.set_layer_visibility(Self::ID, self.visible);
 
             if self.visible {
                 ctx.overlay.mark_has_overlay();
@@ -70,7 +73,7 @@ impl<B: Backend> LocustPlugin<B> for StatusBarPlugin {
         use ratatui::style::{Color, Style};
         use ratatui::widgets::{Block, Borders, Paragraph};
 
-        let size = frame.size();
+        let size = frame.area();
         let area = Rect {
             x: 0,
             y: size.height.saturating_sub(1),
@@ -90,7 +93,7 @@ impl<B: Backend> LocustPlugin<B> for StatusBarPlugin {
 
     fn cleanup(&mut self, ctx: &mut LocustContext) {
         // Clean up our overlay layer
-        ctx.overlay.remove_layer(self.id());
+        ctx.overlay.remove_layer(Self::ID);
     }
 }
 
@@ -102,8 +105,8 @@ mod tests {
     #[test]
     fn test_status_bar_creation() {
         let plugin = StatusBarPlugin::new();
-        assert_eq!(plugin.id(), "example.status_bar");
-        assert_eq!(plugin.priority(), 150);
+        assert_eq!(StatusBarPlugin::ID, "example.status_bar");
+        assert_eq!(LocustPlugin::<TestBackend>::priority(&plugin), 150);
         assert!(plugin.visible);
     }
 
@@ -114,13 +117,13 @@ mod tests {
 
         assert!(locust.ctx.overlay.layers().is_empty());
 
-        plugin.init(&mut locust.ctx);
+        LocustPlugin::<TestBackend>::init(&mut plugin, &mut locust.ctx);
 
         // Check that overlay layer was registered
         assert_eq!(locust.ctx.overlay.layers().len(), 1);
-        assert!(locust.ctx.overlay.has_layer("example.status_bar"));
+        assert!(locust.ctx.overlay.has_layer(StatusBarPlugin::ID));
 
-        plugin.cleanup(&mut locust.ctx);
+        LocustPlugin::<TestBackend>::cleanup(&mut plugin, &mut locust.ctx);
 
         // Check that overlay layer was removed
         assert_eq!(locust.ctx.overlay.layers().len(), 0);

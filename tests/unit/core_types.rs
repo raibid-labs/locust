@@ -128,9 +128,8 @@ fn test_target_registry_filter_by_group() {
 fn test_target_registry_sort_by_priority() {
     let mut registry = TargetRegistry::new();
 
-    registry.register(
-        NavTarget::new(1, Rect::new(0, 0, 10, 10)).with_priority(TargetPriority::Low),
-    );
+    registry
+        .register(NavTarget::new(1, Rect::new(0, 0, 10, 10)).with_priority(TargetPriority::Low));
     registry.register(
         NavTarget::new(2, Rect::new(10, 10, 20, 20)).with_priority(TargetPriority::Critical),
     );

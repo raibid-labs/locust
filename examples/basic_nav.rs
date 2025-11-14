@@ -3,7 +3,7 @@ use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use ratatui::backend::CrosstermBackend;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem};
-use std::io;
+use std::io::{self, Stdout};
 
 use locust::prelude::*;
 
@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut locust = Locust::<CrosstermBackend<_>>::new(LocustConfig::default());
+    let mut locust = Locust::<CrosstermBackend<Stdout>>::new(LocustConfig::default());
     locust.register_plugin(NavPlugin::new());
 
     let items: Vec<ListItem> = (0..20)
