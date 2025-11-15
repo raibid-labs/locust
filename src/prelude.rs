@@ -24,6 +24,7 @@ pub use crate::core::overlay::{OverlayLayer, OverlayState};
 
 // Built-in plugins
 pub use crate::plugins::nav::{NavConfig, NavMode, NavPlugin};
+pub use crate::plugins::omnibar::{BorderType, OmnibarConfig, OmnibarMode, OmnibarPlugin};
 
 // Re-export commonly used ratatui types
 pub use ratatui::backend::Backend;
