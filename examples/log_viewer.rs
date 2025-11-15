@@ -371,9 +371,11 @@ impl LogViewer {
                 .as_secs(),
         );
 
-        let messages = [("New request received", LogLevel::Info),
+        let messages = [
+            ("New request received", LogLevel::Info),
             ("Processing task", LogLevel::Debug),
-            ("Warning: slow query", LogLevel::Warn)];
+            ("Warning: slow query", LogLevel::Warn),
+        ];
 
         let (message, level) = &messages[new_line_number % messages.len()];
 

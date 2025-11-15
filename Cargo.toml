@@ -9,11 +9,22 @@ repository = "https://github.com/raibid-labs/locust"
 [dependencies]
 ratatui = "0.28"
 crossterm = "0.27"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
 criterion = "0.5"
+chrono = "0.4"
+rand = "0.8"
+tempfile = "3"
 
 [[bench]]
 name = "target_spatial_queries"
+harness = false
+
+[[bench]]
+name = "fuzzy_matching"
 harness = false

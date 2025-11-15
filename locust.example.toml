@@ -1,0 +1,69 @@
+# Locust Configuration File
+# This is an example configuration showing all available options.
+# Copy to 'locust.toml' and customize as needed.
+
+[global]
+# Enable logging to stderr
+enable_logging = true
+
+# Logging level: Trace, Debug, Info, Warn, Error
+log_level = "Info"
+
+# Frame rate limit (optional, set to 0 or omit for unlimited)
+fps_limit = 60
+
+# Enable mouse support for hover interactions
+mouse_support = true
+
+# Navigation Plugin Configuration
+[plugins.nav]
+# Key that activates hint mode (default: 'f')
+hint_key = 'f'
+
+# Character set for generating hints
+# Should be ordered from most to least convenient
+# Default uses home row keys
+charset = "asdfghjkl"
+
+# Minimum target area (width * height) to receive a hint
+# Targets smaller than this are ignored
+min_target_area = 4
+
+# Maximum number of hints to generate (0 = unlimited)
+max_hints = 100
+
+# Omnibar Plugin Configuration
+[plugins.omnibar]
+# Key that activates the omnibar
+activation_key = 'p'
+
+# Required modifiers for activation (e.g., ["Ctrl"], ["Ctrl", "Shift"])
+activation_modifiers = ["Ctrl"]
+
+# Maximum number of results to display
+max_results = 10
+
+# Fuzzy matching threshold (0.0 = exact match, 1.0 = very fuzzy)
+fuzzy_threshold = 0.6
+
+# Tooltip Plugin Configuration
+[plugins.tooltip]
+# Delay before showing tooltip on hover (milliseconds)
+default_delay_ms = 500
+
+# Preferred tooltip position: Right, Left, Above, Below, Auto
+default_position = "Right"
+
+# Auto-hide timeout (milliseconds, 0 = never auto-hide)
+auto_hide_ms = 3000
+
+# Highlight Plugin Configuration
+[plugins.highlight]
+# Default animation type: None, Pulse, Shimmer, Breathe
+default_animation = "Pulse"
+
+# Opacity of dim overlay (0.0 = transparent, 1.0 = opaque)
+dim_opacity = 0.7
+
+# Border thickness around highlighted area (pixels)
+border_thickness = 2

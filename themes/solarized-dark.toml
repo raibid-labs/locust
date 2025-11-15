@@ -1,0 +1,52 @@
+name = "Solarized Dark"
+description = "Solarized dark color scheme by Ethan Schoonover"
+
+[colors]
+# Solarized base colors
+background = { r = 0, g = 43, b = 54 }      # base03
+foreground = { r = 131, g = 148, b = 150 }  # base0
+primary = { r = 38, g = 139, b = 210 }      # blue
+secondary = { r = 108, g = 113, b = 196 }   # violet
+accent = { r = 203, g = 75, b = 22 }        # orange
+success = { r = 133, g = 153, b = 0 }       # green
+warning = { r = 181, g = 137, b = 0 }       # yellow
+error = { r = 220, g = 50, b = 47 }         # red
+info = { r = 42, g = 161, b = 152 }         # cyan
+border = { r = 7, g = 54, b = 66 }          # base02
+border_focused = { r = 38, g = 139, b = 210 } # blue
+selection = { r = 7, g = 54, b = 66 }       # base02
+highlight = { r = 203, g = 75, b = 22 }     # orange
+text_normal = { r = 131, g = 148, b = 150 } # base0
+text_muted = { r = 88, g = 110, b = 117 }   # base01
+text_emphasis = { r = 238, g = 232, b = 213 } # base2
+
+[styles.normal]
+fg = { r = 131, g = 148, b = 150 }
+
+[styles.focused]
+fg = { r = 38, g = 139, b = 210 }
+modifiers = ["bold"]
+
+[styles.selected]
+fg = { r = 238, g = 232, b = 213 }
+bg = { r = 7, g = 54, b = 66 }
+
+[styles.disabled]
+fg = { r = 88, g = 110, b = 117 }
+modifiers = ["dim"]
+
+[styles.hint]
+fg = { r = 88, g = 110, b = 117 }
+modifiers = ["italic"]
+
+[styles.hint_matched]
+fg = { r = 38, g = 139, b = 210 }
+modifiers = ["bold"]
+
+[styles.tooltip]
+fg = { r = 131, g = 148, b = 150 }
+bg = { r = 7, g = 54, b = 66 }
+
+[styles.highlight_border]
+fg = { r = 203, g = 75, b = 22 }
+modifiers = ["bold"]

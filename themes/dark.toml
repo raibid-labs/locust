@@ -1,0 +1,51 @@
+name = "Dark"
+description = "Default dark theme with blue accents"
+
+[colors]
+background = { r = 30, g = 30, b = 30 }
+foreground = { r = 220, g = 220, b = 220 }
+primary = { r = 100, g = 150, b = 255 }
+secondary = { r = 150, g = 100, b = 255 }
+accent = { r = 255, g = 200, b = 100 }
+success = { r = 100, g = 255, b = 100 }
+warning = { r = 255, g = 200, b = 100 }
+error = { r = 255, g = 100, b = 100 }
+info = { r = 100, g = 200, b = 255 }
+border = { r = 80, g = 80, b = 80 }
+border_focused = { r = 100, g = 150, b = 255 }
+selection = { r = 60, g = 90, b = 150 }
+highlight = { r = 255, g = 200, b = 100 }
+text_normal = { r = 220, g = 220, b = 220 }
+text_muted = { r = 140, g = 140, b = 140 }
+text_emphasis = { r = 255, g = 255, b = 255 }
+
+[styles.normal]
+fg = { r = 220, g = 220, b = 220 }
+
+[styles.focused]
+fg = { r = 100, g = 150, b = 255 }
+modifiers = ["bold"]
+
+[styles.selected]
+fg = { r = 255, g = 255, b = 255 }
+bg = { r = 60, g = 90, b = 150 }
+
+[styles.disabled]
+fg = { r = 100, g = 100, b = 100 }
+modifiers = ["dim"]
+
+[styles.hint]
+fg = { r = 140, g = 140, b = 140 }
+modifiers = ["italic"]
+
+[styles.hint_matched]
+fg = { r = 100, g = 150, b = 255 }
+modifiers = ["bold"]
+
+[styles.tooltip]
+fg = { r = 220, g = 220, b = 220 }
+bg = { r = 50, g = 50, b = 50 }
+
+[styles.highlight_border]
+fg = { r = 255, g = 200, b = 100 }
+modifiers = ["bold"]

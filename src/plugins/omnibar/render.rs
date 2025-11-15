@@ -1,12 +1,15 @@
 //! Rendering utilities for the Omnibar plugin.
 //!
-//! Handles drawing the popup overlay, input field, cursor, and placeholder text.
+//! Handles drawing the popup overlay, input field, cursor, placeholder text,
+//! and command suggestions with fuzzy match highlighting.
 
 use super::config::OmnibarConfig;
+use super::registry::CommandSuggestion;
 use super::state::OmnibarState;
-use ratatui::layout::{Alignment, Rect};
+use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 use ratatui::Frame;
 
 /// Renderer for the Omnibar overlay.
@@ -18,18 +21,30 @@ impl OmnibarRenderer {
         Self
     }
 
-    /// Renders the omnibar overlay.
+    /// Renders the omnibar overlay with optional suggestions.
     ///
     /// # Arguments
     ///
     /// * `frame` - The ratatui frame to render into
     /// * `state` - Current omnibar state
     /// * `config` - Omnibar configuration
-    pub fn render(&self, frame: &mut Frame, state: &OmnibarState, config: &OmnibarConfig) {
+    /// * `suggestions` - Optional command suggestions to display
+    pub fn render(
+        &self,
+        frame: &mut Frame,
+        state: &OmnibarState,
+        config: &OmnibarConfig,
+        suggestions: &[CommandSuggestion],
+    ) {
         let area = frame.area();
 
         // Calculate popup area (centered, using configured width/height)
-        let popup_area = self.calculate_popup_area(area, config);
+        let popup_height = if suggestions.is_empty() {
+            config.max_height
+        } else {
+            config.max_height + (suggestions.len().min(5) as u16)
+        };
+        let popup_area = self.calculate_popup_area_with_height(area, config, popup_height);
 
         // Clear the area behind the popup
         frame.render_widget(Clear, popup_area);
@@ -49,14 +64,31 @@ impl OmnibarRenderer {
         // Render the border
         frame.render_widget(border, popup_area);
 
-        // Render the input field
-        self.render_input(frame, inner_area, state, config);
+        // Split area for input and suggestions
+        if !suggestions.is_empty() {
+            let chunks = Layout::vertical([
+                Constraint::Length(1),                            // Input line
+                Constraint::Min(suggestions.len().min(5) as u16), // Suggestions
+            ])
+            .split(inner_area);
+
+            self.render_input(frame, chunks[0], state, config);
+            self.render_suggestions(frame, chunks[1], suggestions);
+        } else {
+            // Just input field
+            self.render_input(frame, inner_area, state, config);
+        }
     }
 
-    /// Calculates the centered popup area based on configuration.
-    fn calculate_popup_area(&self, area: Rect, config: &OmnibarConfig) -> Rect {
+    /// Calculates the centered popup area with custom height.
+    fn calculate_popup_area_with_height(
+        &self,
+        area: Rect,
+        config: &OmnibarConfig,
+        height: u16,
+    ) -> Rect {
         let width = (area.width * config.max_width_percent / 100).min(area.width);
-        let height = config.max_height.min(area.height);
+        let height = height.min(area.height);
 
         // Center horizontally
         let x = area.x + (area.width.saturating_sub(width)) / 2;
@@ -145,6 +177,76 @@ impl OmnibarRenderer {
 
         Line::from(spans)
     }
+
+    /// Renders command suggestions with fuzzy match highlighting.
+    fn render_suggestions(&self, frame: &mut Frame, area: Rect, suggestions: &[CommandSuggestion]) {
+        let items: Vec<ListItem> = suggestions
+            .iter()
+            .take(5) // Show max 5 suggestions
+            .map(|suggestion| {
+                let name_line =
+                    self.create_highlighted_line(&suggestion.name, &suggestion.match_positions);
+                let desc_line = Line::from(Span::styled(
+                    format!("  {}", suggestion.description),
+                    Style::default().fg(Color::DarkGray),
+                ));
+
+                ListItem::new(vec![name_line, desc_line])
+            })
+            .collect();
+
+        let list = List::new(items);
+        frame.render_widget(list, area);
+    }
+
+    /// Creates a line with highlighted characters at specified positions.
+    fn create_highlighted_line<'a>(&self, text: &'a str, positions: &[usize]) -> Line<'a> {
+        if positions.is_empty() {
+            return Line::from(Span::styled(
+                text.to_string(),
+                Style::default().fg(Color::White),
+            ));
+        }
+
+        let mut spans = Vec::new();
+        let mut last_pos = 0;
+
+        // Create a set of positions for fast lookup
+        let position_set: std::collections::HashSet<usize> = positions.iter().copied().collect();
+
+        // Iterate through characters and build spans
+        for (byte_idx, ch) in text.char_indices() {
+            if position_set.contains(&byte_idx) {
+                // Add any unhighlighted text before this character
+                if byte_idx > last_pos {
+                    spans.push(Span::styled(
+                        text[last_pos..byte_idx].to_string(),
+                        Style::default().fg(Color::White),
+                    ));
+                }
+
+                // Add highlighted character
+                spans.push(Span::styled(
+                    ch.to_string(),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ));
+
+                last_pos = byte_idx + ch.len_utf8();
+            }
+        }
+
+        // Add remaining unhighlighted text
+        if last_pos < text.len() {
+            spans.push(Span::styled(
+                text[last_pos..].to_string(),
+                Style::default().fg(Color::White),
+            ));
+        }
+
+        Line::from(spans)
+    }
 }
 
 impl Default for OmnibarRenderer {
@@ -163,7 +265,7 @@ mod tests {
         let config = OmnibarConfig::default();
         let area = Rect::new(0, 0, 100, 50);
 
-        let popup = renderer.calculate_popup_area(area, &config);
+        let popup = renderer.calculate_popup_area_with_height(area, &config, config.max_height);
 
         // Should be centered and 60% width
         assert_eq!(popup.width, 60);
@@ -177,7 +279,7 @@ mod tests {
         let config = OmnibarConfig::default();
         let area = Rect::new(0, 0, 40, 10);
 
-        let popup = renderer.calculate_popup_area(area, &config);
+        let popup = renderer.calculate_popup_area_with_height(area, &config, config.max_height);
 
         // Should not exceed screen size
         assert!(popup.width <= 40);
@@ -190,9 +292,33 @@ mod tests {
         let config = OmnibarConfig::new().with_max_width(80).with_max_height(5);
         let area = Rect::new(0, 0, 100, 50);
 
-        let popup = renderer.calculate_popup_area(area, &config);
+        let popup = renderer.calculate_popup_area_with_height(area, &config, config.max_height);
 
         assert_eq!(popup.width, 80);
         assert_eq!(popup.height, 5);
+    }
+
+    #[test]
+    fn test_highlighted_line_creation() {
+        let renderer = OmnibarRenderer::new();
+        let text = "hello";
+        let positions = vec![0, 4]; // 'h' and 'o'
+
+        let line = renderer.create_highlighted_line(text, &positions);
+
+        // Should create a line with highlighted characters
+        assert!(!line.spans.is_empty());
+    }
+
+    #[test]
+    fn test_highlighted_line_no_positions() {
+        let renderer = OmnibarRenderer::new();
+        let text = "hello";
+        let positions = vec![];
+
+        let line = renderer.create_highlighted_line(text, &positions);
+
+        // Should create a simple line
+        assert_eq!(line.spans.len(), 1);
     }
 }

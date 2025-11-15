@@ -1,0 +1,22 @@
+# Default keybindings for Locust
+
+[global]
+quit = { key = 'q' }
+help = { key = { F = 1 } }
+
+[plugins.nav]
+activate = { key = 'f' }
+cancel = { key = "esc" }
+
+[plugins.omnibar]
+activate = { key = 'p', modifiers = 1 }  # CONTROL = 1
+cancel = { key = "esc" }
+
+[plugins.tooltip]
+show = { key = 'h' }
+hide = { key = "esc" }
+
+[plugins.highlight]
+next_step = { key = 'n' }
+previous_step = { key = 'p' }
+skip_tour = { key = 's' }

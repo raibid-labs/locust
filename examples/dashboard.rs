@@ -805,8 +805,7 @@ fn rand() -> u32 {
     use std::collections::hash_map::RandomState;
     use std::hash::{BuildHasher, Hash, Hasher};
     let state = RandomState::new();
-    
-    
+
     (state.hash_one(&SystemTime::now()) % 100) as u32
 }
 

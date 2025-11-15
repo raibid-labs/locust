@@ -1,12 +1,20 @@
+use crate::core::config::{ConfigError, LocustConfig as Config};
 use crate::core::input::LocustEventOutcome;
+use crate::core::keybindings::{KeyBinding, KeyMap, KeyMapError};
 use crate::core::overlay::OverlayState;
 use crate::core::plugin::LocustPlugin;
 use crate::core::targets::TargetRegistry;
+use crate::core::theme::{Theme, ThemeError};
+use crate::core::theme_manager::ThemeManager;
+use crate::plugins::tooltip::TooltipRegistry;
 use crossterm::event::Event;
 use ratatui::backend::Backend;
 use ratatui::Frame;
 
-/// Global configuration for Locust.
+/// Legacy global configuration for Locust.
+///
+/// Note: This is kept for backward compatibility. New code should use
+/// `crate::core::config::LocustConfig` for the full configuration system.
 #[derive(Debug, Clone)]
 pub struct LocustConfig {
     /// Whether the built-in navigation plugin should be registered by default.
@@ -25,8 +33,11 @@ impl Default for LocustConfig {
 ///
 /// This context is shared between all plugins and provides:
 /// - Target registry for navigation
+/// - Tooltip registry for contextual help
 /// - Overlay state management
 /// - Frame lifecycle tracking
+/// - Configuration management
+/// - Theme and keybinding management
 /// - Plugin communication channels (future)
 ///
 /// # Thread Safety
@@ -38,11 +49,87 @@ pub struct LocustContext {
     /// Registry of all navigation targets discovered in the current frame.
     pub targets: TargetRegistry,
 
+    /// Registry of tooltips mapped to target IDs.
+    pub tooltips: TooltipRegistry,
+
     /// State tracking for overlay rendering and management.
     pub overlay: OverlayState,
 
     /// Frame counter for tracking render cycles.
     pub frame_count: u64,
+
+    /// Configuration (optional, can be loaded from file)
+    pub config: Option<Config>,
+
+    /// Theme manager for runtime theme switching
+    pub theme_manager: ThemeManager,
+
+    /// Keybinding configuration
+    #[allow(clippy::derivable_impls)]
+    pub keymap: KeyMap,
+}
+
+impl LocustContext {
+    /// Updates the configuration and returns the old one if it existed.
+    pub fn update_config(&mut self, config: Config) -> Option<Config> {
+        self.config.replace(config)
+    }
+
+    /// Gets a reference to the global configuration.
+    pub fn get_global_config(&self) -> Option<&crate::core::config::GlobalConfig> {
+        self.config.as_ref().map(|c| &c.global)
+    }
+
+    /// Gets plugin-specific configuration.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use locust::core::config::NavConfig;
+    ///
+    /// if let Some(nav_config) = ctx.get_plugin_config::<NavConfig>("nav") {
+    ///     println!("Hint key: {}", nav_config.hint_key);
+    /// }
+    /// ```
+    pub fn get_plugin_config<T: serde::de::DeserializeOwned>(
+        &self,
+        plugin_id: &str,
+    ) -> Option<T> {
+        self.config.as_ref()?.get_plugin_config(plugin_id)
+    }
+
+    /// Sets the current theme by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ThemeError::NotFound` if the theme doesn't exist.
+    pub fn set_theme(&mut self, name: &str) -> Result<(), ThemeError> {
+        self.theme_manager.set_theme(name)
+    }
+
+    /// Gets a reference to the current theme.
+    pub fn get_theme(&self) -> &Theme {
+        self.theme_manager.get_current_theme()
+    }
+
+    /// Gets a reference to the keymap.
+    pub fn get_keymap(&self) -> &KeyMap {
+        &self.keymap
+    }
+
+    /// Binds a key to an action.
+    ///
+    /// # Errors
+    ///
+    /// Returns `KeyMapError` if the binding is invalid.
+    pub fn bind_key(&mut self, action: &str, binding: KeyBinding) -> Result<(), KeyMapError> {
+        self.keymap.bind(action, binding)
+    }
+
+    /// Unbinds an action.
+    pub fn unbind_key(&mut self, action: &str) {
+        self.keymap.unbind(action)
+    }
 }
 
 /// Central entry point for embedding Locust into a ratatui app.
@@ -141,6 +228,50 @@ where
     /// Check if a plugin with the given ID is registered.
     pub fn has_plugin(&self, id: &str) -> bool {
         self.plugins.iter().any(|p| p.id() == id)
+    }
+
+    /// Updates the runtime configuration and notifies all plugins.
+    ///
+    /// This triggers the `reload_config` hook on all registered plugins,
+    /// allowing them to update their internal state.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use locust::core::config::LocustConfig;
+    /// use std::path::Path;
+    ///
+    /// let config = LocustConfig::from_file(Path::new("locust.toml"))?;
+    /// locust.update_config(config)?;
+    /// # Ok::<(), locust::core::config::ConfigError>(())
+    /// ```
+    pub fn update_config(&mut self, config: Config) -> Result<(), ConfigError> {
+        // Validate before applying
+        let errors = config.validate();
+        let has_errors = errors.iter().any(|e| {
+            matches!(
+                e.severity,
+                crate::core::config::Severity::Error
+            )
+        });
+
+        if has_errors {
+            return Err(ConfigError::NoConfigPath); // TODO: Better error type
+        }
+
+        self.ctx.update_config(config);
+
+        // Notify all plugins of config change
+        for plugin in self.plugins.iter_mut() {
+            plugin.reload_config(&self.ctx);
+        }
+
+        Ok(())
+    }
+
+    /// Gets a reference to the current configuration.
+    pub fn get_config(&self) -> Option<&Config> {
+        self.ctx.config.as_ref()
     }
 }
 

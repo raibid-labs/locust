@@ -16,14 +16,40 @@ use crossterm::{
 };
 use locust::core::context::LocustContext;
 use locust::core::plugin::LocustPlugin;
-use locust::plugins::omnibar::{BorderType, OmnibarConfig, OmnibarPlugin};
+use locust::plugins::omnibar::{BorderType, Command, CommandResult, OmnibarConfig, OmnibarPlugin};
 use ratatui::backend::{Backend, CrosstermBackend};
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::{Frame, Terminal};
 use std::io;
+use std::sync::Arc;
+
+// Custom demo command
+struct CustomDemoCommand {
+    name: &'static str,
+    desc: &'static str,
+}
+
+impl Command for CustomDemoCommand {
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn description(&self) -> &str {
+        self.desc
+    }
+
+    fn category(&self) -> Option<&str> {
+        Some("demo")
+    }
+
+    fn execute(&self, _ctx: &mut LocustContext) -> CommandResult {
+        eprintln!("Custom demo command '{}' executed!", self.name);
+        Ok(())
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup terminal
@@ -73,7 +99,7 @@ impl App {
             .with_activation_key('/')
             .with_max_width(70)
             .with_max_height(3)
-            .with_placeholder("Type a command... (try: help, quit, hello)")
+            .with_placeholder("Type a command... (try: help, quit, hello, demo)")
             .with_border_type(BorderType::Rounded)
             .with_border_style(
                 Style::default()
@@ -87,6 +113,20 @@ impl App {
             );
 
         let mut omnibar = OmnibarPlugin::with_config(config);
+
+        // Register built-in commands (quit, help, version, etc.)
+        omnibar.register_builtin_commands();
+
+        // Register custom demo commands
+        omnibar.register_command(Arc::new(CustomDemoCommand {
+            name: "demo",
+            desc: "Run a custom demo command",
+        }));
+        omnibar.register_command(Arc::new(CustomDemoCommand {
+            name: "test",
+            desc: "Test command for demonstration",
+        }));
+
         LocustPlugin::<CrosstermBackend<io::Stdout>>::init(&mut omnibar, &mut ctx);
 
         Self {
@@ -111,6 +151,11 @@ impl App {
             &event,
             &mut self.ctx,
         );
+
+        // Check if quit command was executed
+        if self.omnibar.should_quit() {
+            self.quit = true;
+        }
 
         // Check if we need to redraw
         match result {
@@ -187,7 +232,18 @@ fn ui<B: Backend>(f: &mut Frame, app: &App) {
         Line::from("  • Press Esc to cancel"),
         Line::from("  • Use ← → Home End to move cursor"),
         Line::from("  • Use ↑ ↓ to navigate command history"),
-        Line::from("  • Commands are logged to stderr"),
+        Line::from("  • Fuzzy search with live suggestions"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Available Commands:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  quit (q, exit) - Exit the application"),
+        Line::from("  help (h, ?)    - Show all commands"),
+        Line::from("  version (v)    - Show version info"),
+        Line::from("  hello (hi)     - Say hello"),
+        Line::from("  demo           - Run demo command"),
+        Line::from("  clear          - Clear command history"),
         Line::from(""),
     ];
 

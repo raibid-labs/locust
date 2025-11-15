@@ -1,0 +1,52 @@
+name = "Nord"
+description = "Arctic, north-bluish color palette"
+
+[colors]
+# Nord Polar Night
+background = { r = 46, g = 52, b = 64 }     # nord0
+foreground = { r = 216, g = 222, b = 233 }  # nord4
+primary = { r = 136, g = 192, b = 208 }     # nord8
+secondary = { r = 129, g = 161, b = 193 }   # nord9
+accent = { r = 235, g = 203, b = 139 }      # nord13
+success = { r = 163, g = 190, b = 140 }     # nord14
+warning = { r = 235, g = 203, b = 139 }     # nord13
+error = { r = 191, g = 97, b = 106 }        # nord11
+info = { r = 136, g = 192, b = 208 }        # nord8
+border = { r = 59, g = 66, b = 82 }         # nord1
+border_focused = { r = 136, g = 192, b = 208 } # nord8
+selection = { r = 67, g = 76, b = 94 }      # nord2
+highlight = { r = 235, g = 203, b = 139 }   # nord13
+text_normal = { r = 216, g = 222, b = 233 } # nord4
+text_muted = { r = 76, g = 86, b = 106 }    # nord3
+text_emphasis = { r = 236, g = 239, b = 244 } # nord6
+
+[styles.normal]
+fg = { r = 216, g = 222, b = 233 }
+
+[styles.focused]
+fg = { r = 136, g = 192, b = 208 }
+modifiers = ["bold"]
+
+[styles.selected]
+fg = { r = 236, g = 239, b = 244 }
+bg = { r = 67, g = 76, b = 94 }
+
+[styles.disabled]
+fg = { r = 76, g = 86, b = 106 }
+modifiers = ["dim"]
+
+[styles.hint]
+fg = { r = 76, g = 86, b = 106 }
+modifiers = ["italic"]
+
+[styles.hint_matched]
+fg = { r = 136, g = 192, b = 208 }
+modifiers = ["bold"]
+
+[styles.tooltip]
+fg = { r = 216, g = 222, b = 233 }
+bg = { r = 59, g = 66, b = 82 }
+
+[styles.highlight_border]
+fg = { r = 235, g = 203, b = 139 }
+modifiers = ["bold"]

@@ -99,27 +99,58 @@ let config = OmnibarConfig::new()
 let omnibar = OmnibarPlugin::with_config(config);
 ```
 
+## Plugin Configuration
+
+As of WS-10, Locust supports a comprehensive configuration system that allows plugins to be configured via TOML or JSON files.
+
+### Loading Plugin Configuration
+
+Plugins can access their configuration through the `LocustContext`:
+
+```rust
+impl<B: Backend> LocustPlugin<B> for MyPlugin {
+    fn init(&mut self, ctx: &mut LocustContext) {
+        if let Some(config) = ctx.get_plugin_config::<MyPluginConfig>("my_plugin") {
+            self.apply_config(config);
+        }
+    }
+
+    fn reload_config(&mut self, ctx: &LocustContext) {
+        if let Some(config) = ctx.get_plugin_config::<MyPluginConfig>("my_plugin") {
+            self.apply_config(config);
+        }
+    }
+}
+```
+
+### Configuration File Format
+
+```toml
+[plugins.my_plugin]
+setting1 = "value"
+setting2 = 42
+setting3 = true
+```
+
+For detailed information about the configuration system, see [CONFIGURATION.md](CONFIGURATION.md).
+
 ## Planned Plugins
 
 ### Phase 3 Plugins (Q1 2025)
 
-#### TooltipPlugin
+#### TooltipPlugin ✅ (Completed)
 - Context-sensitive tooltips on hover
 - Markdown content support
 - Smart positioning
 - Delay configuration
+- **Configurable via TOML/JSON**
 
-#### HighlightPlugin
+#### HighlightPlugin ✅ (Completed)
 - Region highlighting for tours
 - Animation support
 - Multi-step sequences
 - Customizable styles
-
-#### ConfigPlugin
-- Runtime configuration management
-- Hot reload support
-- User preferences
-- Keybinding customization
+- **Configurable via TOML/JSON**
 
 #### ClipboardPlugin
 - Cross-platform clipboard integration
@@ -213,17 +244,40 @@ stateDiagram-v2
 use locust::prelude::*;
 use crossterm::event::{Event, KeyCode};
 use ratatui::{backend::Backend, Frame};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MyPluginConfig {
+    pub activation_key: char,
+    pub enabled: bool,
+}
+
+impl Default for MyPluginConfig {
+    fn default() -> Self {
+        Self {
+            activation_key: 'm',
+            enabled: true,
+        }
+    }
+}
 
 pub struct MyCustomPlugin {
+    config: MyPluginConfig,
     enabled: bool,
-    state: PluginState,
 }
 
 impl MyCustomPlugin {
     pub fn new() -> Self {
         Self {
+            config: MyPluginConfig::default(),
             enabled: false,
-            state: PluginState::default(),
+        }
+    }
+
+    pub fn with_config(config: MyPluginConfig) -> Self {
+        Self {
+            config,
+            enabled: false,
         }
     }
 }
@@ -238,21 +292,30 @@ impl<B: Backend> LocustPlugin<B> for MyCustomPlugin {
     }
 
     fn init(&mut self, ctx: &mut LocustContext) {
-        // Initialize plugin state
-        ctx.store_data("plugin_initialized", Box::new(true));
+        // Load configuration from context if available
+        if let Some(config) = ctx.get_plugin_config::<MyPluginConfig>("my_custom_plugin") {
+            self.config = config;
+        }
+    }
+
+    fn reload_config(&mut self, ctx: &LocustContext) {
+        // Hot reload configuration
+        if let Some(config) = ctx.get_plugin_config::<MyPluginConfig>("my_custom_plugin") {
+            self.config = config;
+        }
     }
 
     fn on_event(&mut self, event: &Event, ctx: &mut LocustContext) -> PluginEventResult {
         if let Event::Key(key) = event {
-            if key.code == KeyCode::Char('m') && !self.enabled {
+            if key.code == KeyCode::Char(self.config.activation_key) && !self.enabled {
                 self.enabled = true;
-                return PluginEventResult::Consumed;
+                return PluginEventResult::ConsumedRequestRedraw;
             }
         }
         PluginEventResult::NotHandled
     }
 
-    fn render_overlay(&self, frame: &mut Frame<'_, B>, ctx: &LocustContext) {
+    fn render_overlay(&self, frame: &mut Frame, ctx: &LocustContext) {
         if self.enabled {
             // Render your overlay
             let area = centered_rect(50, 20, frame.size());
@@ -262,6 +325,14 @@ impl<B: Backend> LocustPlugin<B> for MyCustomPlugin {
         }
     }
 }
+```
+
+Configuration file example:
+
+```toml
+[plugins.my_custom_plugin]
+activation_key = 'x'
+enabled = true
 ```
 
 ### Advanced Example: Search Plugin

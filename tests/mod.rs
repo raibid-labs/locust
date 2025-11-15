@@ -1,6 +1,7 @@
 // Test modules
 mod unit {
     mod core_types;
+    mod fuzzy_matcher;
     mod omnibar_state;
 }
 

@@ -138,4 +138,16 @@ where
     /// # Arguments
     /// * `ctx` - Mutable reference to LocustContext for cleanup
     fn cleanup(&mut self, _ctx: &mut LocustContext) {}
+
+    /// Called when configuration is reloaded.
+    ///
+    /// Plugins can use this to update their internal state based on
+    /// new configuration values loaded from file or updated at runtime.
+    ///
+    /// # Arguments
+    /// * `ctx` - Read-only context to access updated configuration
+    ///
+    /// # Default Implementation
+    /// Does nothing. Override to implement configuration hot-reload support.
+    fn reload_config(&mut self, _ctx: &LocustContext) {}
 }

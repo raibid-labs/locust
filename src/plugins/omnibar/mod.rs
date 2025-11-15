@@ -24,12 +24,18 @@
 //! LocustPlugin::<TestBackend>::init(&mut omnibar, &mut ctx);
 //! ```
 
+pub mod commands;
 pub mod config;
+pub mod registry;
 pub mod render;
 pub mod state;
 
 // Re-export for easier access
+pub use commands::{
+    ClearHistoryCommand, EchoCommand, HelloCommand, HelpCommand, QuitCommand, VersionCommand,
+};
 pub use config::{BorderType, OmnibarConfig};
+pub use registry::{Command, CommandRegistry, CommandResult, CommandSuggestion};
 pub use state::OmnibarMode;
 
 use crate::core::context::LocustContext;
@@ -40,6 +46,8 @@ use ratatui::backend::Backend;
 use ratatui::Frame;
 use render::OmnibarRenderer;
 use state::OmnibarState;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 
 /// Command palette plugin for quick command execution.
 ///
@@ -66,9 +74,9 @@ use state::OmnibarState;
 ///
 /// # Command Execution
 ///
-/// When a command is submitted (Enter key), the plugin currently logs it
-/// for debugging. In future versions (WS-06), commands will be dispatched
-/// to a command registry for actual execution.
+/// When a command is submitted (Enter key), the plugin looks up the command
+/// in the registry and executes it. Built-in commands can be registered
+/// using `register_builtin_commands()`.
 pub struct OmnibarPlugin {
     /// Plugin configuration
     config: OmnibarConfig,
@@ -78,6 +86,12 @@ pub struct OmnibarPlugin {
 
     /// Renderer
     renderer: OmnibarRenderer,
+
+    /// Command registry (wrapped for thread-safe sharing with commands)
+    registry: Arc<Mutex<CommandRegistry>>,
+
+    /// Quit flag (shared with QuitCommand)
+    quit_flag: Arc<AtomicBool>,
 }
 
 impl Default for OmnibarPlugin {
@@ -99,6 +113,94 @@ impl OmnibarPlugin {
             state: OmnibarState::new(max_history),
             config,
             renderer: OmnibarRenderer::new(),
+            registry: Arc::new(Mutex::new(CommandRegistry::new())),
+            quit_flag: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Registers built-in commands (quit, help, clear-history, etc.).
+    ///
+    /// This is a convenience method that registers all standard commands.
+    /// Call this after creating the plugin to enable built-in functionality.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use locust::plugins::omnibar::OmnibarPlugin;
+    ///
+    /// let mut omnibar = OmnibarPlugin::new();
+    /// omnibar.register_builtin_commands();
+    /// ```
+    pub fn register_builtin_commands(&mut self) {
+        if let Ok(mut registry) = self.registry.lock() {
+            // System commands
+            registry.register(Arc::new(commands::QuitCommand::new(Arc::clone(
+                &self.quit_flag,
+            ))));
+            registry.register(Arc::new(commands::HelpCommand::new(Arc::clone(
+                &self.registry,
+            ))));
+            registry.register(Arc::new(commands::VersionCommand::new()));
+
+            // Omnibar commands
+            registry.register(Arc::new(commands::ClearHistoryCommand::new()));
+
+            // Utility commands
+            registry.register(Arc::new(commands::EchoCommand::new()));
+
+            // Demo commands
+            registry.register(Arc::new(commands::HelloCommand::new()));
+        }
+    }
+
+    /// Registers a custom command.
+    ///
+    /// # Arguments
+    ///
+    /// * `command` - The command to register
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use locust::plugins::omnibar::{OmnibarPlugin, Command, CommandResult};
+    /// use locust::core::context::LocustContext;
+    /// use std::sync::Arc;
+    ///
+    /// struct MyCommand;
+    /// impl Command for MyCommand {
+    ///     fn name(&self) -> &str { "mycmd" }
+    ///     fn description(&self) -> &str { "My custom command" }
+    ///     fn execute(&self, _ctx: &mut LocustContext) -> CommandResult { Ok(()) }
+    /// }
+    ///
+    /// let mut omnibar = OmnibarPlugin::new();
+    /// omnibar.register_command(Arc::new(MyCommand));
+    /// ```
+    pub fn register_command(&mut self, command: Arc<dyn Command>) {
+        if let Ok(mut registry) = self.registry.lock() {
+            registry.register(command);
+        }
+    }
+
+    /// Returns a reference to the command registry (for advanced use).
+    pub fn registry(&self) -> Arc<Mutex<CommandRegistry>> {
+        Arc::clone(&self.registry)
+    }
+
+    /// Checks if the quit flag has been set by the QuitCommand.
+    ///
+    /// Applications should check this flag in their main loop and exit
+    /// gracefully when it becomes true.
+    pub fn should_quit(&self) -> bool {
+        self.quit_flag.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Returns the current command suggestions based on input.
+    pub fn get_suggestions(&self) -> Vec<CommandSuggestion> {
+        if let Ok(registry) = self.registry.lock() {
+            registry.search(self.state.buffer())
+        } else {
+            Vec::new()
         }
     }
 
@@ -131,12 +233,28 @@ impl OmnibarPlugin {
 
     /// Handles command submission.
     ///
-    /// Currently logs the command. In WS-06, this will dispatch to
-    /// the command registry for execution.
-    fn handle_submit(&mut self) {
-        if let Some(command) = self.state.submit() {
-            // TODO (WS-06): Dispatch to command registry
-            eprintln!("Locust Omnibar: Command submitted: '{}'", command);
+    /// Looks up the command in the registry and executes it.
+    /// Special handling for clear-history command to clear the omnibar's history.
+    fn handle_submit(&mut self, ctx: &mut LocustContext) {
+        if let Some(command_name) = self.state.submit() {
+            // Special case: clear-history command
+            if command_name == "clear-history" || command_name == "clear" || command_name == "ch" {
+                self.state.clear_history();
+            }
+
+            // Execute the command
+            if let Ok(registry) = self.registry.lock() {
+                match registry.execute(&command_name, ctx) {
+                    Ok(()) => {
+                        // Command executed successfully
+                    }
+                    Err(err) => {
+                        eprintln!("Locust Omnibar Error: {}", err);
+                    }
+                }
+            } else {
+                eprintln!("Locust Omnibar Error: Failed to access command registry");
+            }
         } else {
             // Empty input - just deactivate
             self.deactivate();
@@ -182,7 +300,7 @@ where
 
                 // Active: handle enter to submit
                 (OmnibarMode::Input, KeyCode::Enter, _) => {
-                    self.handle_submit();
+                    self.handle_submit(ctx);
                     return PluginEventResult::ConsumedRequestRedraw;
                 }
 
@@ -238,7 +356,9 @@ where
             return;
         }
 
-        self.renderer.render(frame, &self.state, &self.config);
+        let suggestions = self.get_suggestions();
+        self.renderer
+            .render(frame, &self.state, &self.config, &suggestions);
     }
 
     fn cleanup(&mut self, _ctx: &mut LocustContext) {
@@ -309,7 +429,7 @@ mod tests {
         plugin.state_mut().insert_char('m');
         plugin.state_mut().insert_char('d');
 
-        plugin.handle_submit();
+        plugin.handle_submit(&mut ctx);
 
         // Should be deactivated after submit
         assert!(!plugin.state().is_active());
