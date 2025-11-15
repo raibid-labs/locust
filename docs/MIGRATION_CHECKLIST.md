@@ -774,6 +774,37 @@ auto_start_first_run = true
 
 ---
 
+## Related Documentation
+
+This migration checklist connects with other Locust documentation to guide your migration:
+
+### Migration Resources
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Complete integration instructions
+- **[EXAMPLES.md](EXAMPLES.md)** - Migration examples
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world migration stories
+
+### Implementation Guides
+- **[PLUGINS.md](PLUGINS.md)** - Available plugins for migration
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter migration
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Custom plugin migration
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration migration
+- **[THEMING.md](THEMING.md)** - Theme migration
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding migration
+
+### System Understanding
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture changes
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Migration patterns
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Migration issues and solutions
+
+### Project Documentation
+- **[README.md](../README.md#quick-start)** - Quick migration overview
+- **[ROADMAP.md](ROADMAP.md)** - Future migration features
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing migration improvements
+
 *For more information, see:*
 - *[Integration Guide](INTEGRATION_GUIDE.md)*
 - *[Troubleshooting](TROUBLESHOOTING.md)*

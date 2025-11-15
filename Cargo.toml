@@ -20,6 +20,7 @@ criterion = "0.5"
 chrono = "0.4"
 rand = "0.8"
 tempfile = "3"
+proptest = "1.4"
 
 [[bench]]
 name = "target_spatial_queries"
@@ -27,4 +28,8 @@ harness = false
 
 [[bench]]
 name = "fuzzy_matching"
+harness = false
+
+[[bench]]
+name = "plugin_performance"
 harness = false

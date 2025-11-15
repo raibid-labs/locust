@@ -1522,3 +1522,34 @@ let popup_area = centered_rect(60, 40, frame_area);
 3. Unused imports warning (src/plugins/tooltip/render.rs)
 
 Once these core issues are fixed, all examples will compile with zero warnings.
+
+## Related Documentation
+
+These examples demonstrate concepts from across the Locust documentation:
+
+### Getting Started
+- **[README.md](../README.md#examples)** - Example overview
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integration patterns used in examples
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration strategies demonstrated
+
+### Plugin Usage
+- **[PLUGINS.md](PLUGINS.md)** - Plugin APIs used in examples
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Custom plugin patterns
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapters in action
+
+### Configuration Examples
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration patterns demonstrated
+- **[THEMING.md](THEMING.md)** - Theme usage in examples
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding configurations
+
+### Design Patterns
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture patterns demonstrated
+- **[API_PATTERNS.md](API_PATTERNS.md)** - API patterns in practice
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Production-level implementations
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Solutions to common example issues
+- **[CONTRIBUTING.md](../CONTRIBUTING.md#examples)** - Contributing new examples
+
+### Project Documentation
+- **[ROADMAP.md](ROADMAP.md)** - Future example plans

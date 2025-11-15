@@ -1291,6 +1291,34 @@ if let event = event::read()? {
 4. Rust Plugin Systems: https://rust-patterns.github.io
 5. Event-Driven Architecture: Martin Fowler's EAA Patterns
 
+## Related Documentation
+
+This architecture document connects with other Locust documentation:
+
+### Implementation Guides
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - How to integrate Locust's architecture into your app
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Create plugins using the plugin architecture
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Design patterns that leverage this architecture
+
+### Configuration & Customization
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configure the components described in this architecture
+- **[THEMING.md](THEMING.md)** - Theme the overlay rendering layer
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Configure the event pipeline
+
+### Reference Documentation
+- **[PLUGINS.md](PLUGINS.md)** - Built-in plugins that implement this architecture
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter implementations
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#architecture-issues)** - Architecture-related troubleshooting
+
+### Examples
+- **[EXAMPLES.md](EXAMPLES.md)** - Working examples demonstrating the architecture
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world architecture implementations
+
+### Project Documentation
+- **[README.md](../README.md)** - Project overview and quick start
+- **[ROADMAP.md](ROADMAP.md)** - Architecture evolution timeline
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration guide for architecture changes
+
 ---
 
 *This architecture document is a living document and will be updated as the Locust framework evolves. For the latest version, see the project repository.*

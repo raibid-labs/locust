@@ -599,6 +599,35 @@ We welcome plugin contributions! See [CONTRIBUTING.md](../CONTRIBUTING.md) for g
 - [ ] Follows Rust conventions
 - [ ] Performance benchmarks (if applicable)
 
+## Related Documentation
+
+This plugin reference document connects with other Locust documentation:
+
+### Plugin Development
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Comprehensive guide to creating custom plugins
+- **[API_PATTERNS.md](API_PATTERNS.md#plugin-patterns)** - Plugin design patterns and best practices
+- **[ARCHITECTURE.md](ARCHITECTURE.md#plugin-system-design)** - Plugin architecture deep dive
+
+### Configuration & Customization
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configure built-in and custom plugins
+- **[THEMING.md](THEMING.md)** - Theme plugin overlays
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Configure plugin keybindings
+
+### Integration
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integrate plugins into your application
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapters for navigation plugin
+- **[EXAMPLES.md](EXAMPLES.md)** - Plugin usage examples
+
+### Reference
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#plugin-issues)** - Plugin troubleshooting
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world plugin implementations
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Plugin migration guide
+
+### Project Documentation
+- **[README.md](../README.md#plugins)** - Plugin overview
+- **[ROADMAP.md](ROADMAP.md)** - Plugin development timeline
+- **[CONTRIBUTING.md](../CONTRIBUTING.md#plugin-development)** - Plugin contribution guidelines
+
 ---
 
 *For detailed plugin development instructions, see the [Plugin Development Guide](PLUGIN_DEVELOPMENT_GUIDE.md).*

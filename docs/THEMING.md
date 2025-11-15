@@ -330,6 +330,46 @@ impl<B: Backend> LocustPlugin<B> for MyPlugin {
 - [Color Contrast Checker](https://webaim.org/resources/contrastchecker/)
 - [Color Blindness Simulator](https://www.color-blindness.com/coblis-color-blindness-simulator/)
 
+## Related Documentation
+
+This theming guide connects with other Locust customization documentation:
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configure theme settings
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding visual styles
+
+### Plugin Customization
+- **[PLUGINS.md](PLUGINS.md)** - Theme plugin overlays
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Create themeable plugins
+
+### Implementation
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integrate themes into your application
+- **[ARCHITECTURE.md](ARCHITECTURE.md#theme-system)** - Theme system architecture
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Theme design patterns
+
+### Examples
+- **[EXAMPLES.md](EXAMPLES.md)** - Themed example applications
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world theme usage
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#theming-issues)** - Theme troubleshooting
+
+### Project Documentation
+- **[README.md](../README.md#theming)** - Theming overview
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing themes
+
 ---
 
 For more information, see the [Locust Documentation](../README.md).
+
+---
+
+## Related Documentation
+
+- **[Configuration](CONFIGURATION.md)** - Configuration system overview
+- **[Keybindings](KEYBINDINGS.md)** - Keybinding customization
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - Integrating themes
+- **[Plugin Development](PLUGIN_DEVELOPMENT_GUIDE.md)** - Using themes in plugins
+- **[Examples](EXAMPLES.md#theme-switcher)** - Theme switcher example
+
+---
+
+*For complete API reference, see [docs.rs/locust](https://docs.rs/locust)*

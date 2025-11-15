@@ -423,6 +423,35 @@ We welcome contributions! Priority areas:
 - **Blog**: [locust-tui.dev/blog](https://locust-tui.dev/blog)
 - **Workstream Plan**: [docs/orchestration/workstream-plan.md](orchestration/workstream-plan.md)
 
+## Related Documentation
+
+This roadmap connects with other Locust project documentation:
+
+### Project Overview
+- **[README.md](../README.md)** - Current project status
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing to roadmap items
+- **[ARCHITECTURE.md](ARCHITECTURE.md#future-architecture-considerations)** - Future architecture plans
+
+### Implementation Documentation
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Current integration capabilities
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Plugin system evolution
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Evolving API patterns
+
+### Feature Documentation
+- **[PLUGINS.md](PLUGINS.md)** - Current and planned plugins
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration system roadmap
+- **[THEMING.md](THEMING.md)** - Theme system evolution
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding improvements
+
+### Examples & Migration
+- **[EXAMPLES.md](EXAMPLES.md)** - Example applications roadmap
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Future case studies
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration path evolution
+
+### Reference
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter roadmap
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Known issues and fixes
+
 ---
 
-*Last Updated: November 2024 | Version: 0.1.0-alpha | [Edit on GitHub](https://github.com/your-org/locust/edit/main/docs/ROADMAP.md)*
+*Last Updated: January 2025 | Version: 0.1.0-alpha | [Edit on GitHub](https://github.com/raibid-labs/locust/edit/main/docs/ROADMAP.md)*

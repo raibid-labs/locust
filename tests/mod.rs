@@ -13,3 +13,7 @@ mod integration {
 mod examples {
     mod example_plugin;
 }
+
+// Property-based tests (requires proptest)
+#[cfg(test)]
+mod property;

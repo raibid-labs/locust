@@ -1318,6 +1318,37 @@ impl<B: Backend> LocustPlugin<B> for CleanupPlugin {
 }
 ```
 
+## Related Documentation
+
+This integration guide connects with other Locust documentation to help you successfully integrate Locust into your application:
+
+### Getting Started
+- **[README.md](../README.md#quick-start)** - Quick start guide
+- **[EXAMPLES.md](EXAMPLES.md)** - Worked integration examples
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Step-by-step migration from vanilla ratatui
+
+### Core Documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Understanding the integration points
+- **[PLUGINS.md](PLUGINS.md)** - Available plugins for integration
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget integration adapters
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration system integration
+- **[THEMING.md](THEMING.md)** - Theme integration
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding integration
+
+### Advanced Topics
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Create custom plugins
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Integration design patterns
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world integration examples
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Integration issues and solutions
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Development workflow
+
+### Project Documentation
+- **[ROADMAP.md](ROADMAP.md)** - Integration features roadmap
+
 ---
 
 *This integration guide is part of the Locust documentation. For more details, see [Architecture](ARCHITECTURE.md) and [Plugin Development](PLUGIN_DEVELOPMENT_GUIDE.md).*

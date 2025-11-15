@@ -1511,6 +1511,34 @@ impl Default for LocustConfig {
 }
 ```
 
+## Related Documentation
+
+This comprehensive plugin development guide connects with other Locust documentation:
+
+### Essential Reading
+- **[PLUGINS.md](PLUGINS.md)** - Built-in plugin reference and examples
+- **[ARCHITECTURE.md](ARCHITECTURE.md#plugin-system-design)** - Plugin architecture deep dive
+- **[API_PATTERNS.md](API_PATTERNS.md#plugin-patterns)** - Plugin design patterns
+
+### Configuration & Testing
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Make plugins configurable
+- **[CONTRIBUTING.md](../CONTRIBUTING.md#testing-guidelines)** - Plugin testing guidelines
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#plugin-issues)** - Debug plugin issues
+
+### Integration & Examples
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integrate plugins into applications
+- **[EXAMPLES.md](EXAMPLES.md)** - Plugin usage in working examples
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world plugin implementations
+
+### Customization
+- **[THEMING.md](THEMING.md)** - Theme plugin overlays
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Plugin keybinding configuration
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter patterns
+
+### Project Documentation
+- **[README.md](../README.md#plugin-development)** - Plugin development overview
+- **[ROADMAP.md](ROADMAP.md)** - Plugin ecosystem roadmap
+
 ---
 
 *This guide is part of the Locust documentation. For more information, see the [Architecture](ARCHITECTURE.md) and [API Documentation](https://docs.rs/locust).*

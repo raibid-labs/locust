@@ -438,6 +438,46 @@ cargo run --example custom_keybindings
 - [Crossterm Key Events](https://docs.rs/crossterm/latest/crossterm/event/struct.KeyEvent.html)
 - [Ratatui Input Handling](https://ratatui.rs/how-to/input/)
 
+## Related Documentation
+
+This keybindings guide connects with other Locust configuration documentation:
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - General configuration system
+- **[THEMING.md](THEMING.md)** - Visual styling for keybindings
+- **[PLUGINS.md](PLUGINS.md)** - Plugin keybinding configuration
+
+### Implementation
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integrate keybindings into your app
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Custom plugin keybindings
+- **[ARCHITECTURE.md](ARCHITECTURE.md#keybinding-system)** - Keybinding architecture
+
+### Examples
+- **[EXAMPLES.md](EXAMPLES.md)** - Keybinding usage examples
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world keybinding configurations
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Keybinding design patterns
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#keybinding-issues)** - Keybinding troubleshooting
+
+### Project Documentation
+- **[README.md](../README.md#keybindings)** - Keybindings overview
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing keybinding features
+
 ---
 
 For more information, see the [Locust Documentation](../README.md).
+
+---
+
+## Related Documentation
+
+- **[Configuration](CONFIGURATION.md)** - Configuration system overview
+- **[Theming](THEMING.md)** - Theme customization
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - Integrating keybindings
+- **[Plugin Development](PLUGIN_DEVELOPMENT_GUIDE.md)** - Plugin keybindings
+- **[Troubleshooting](TROUBLESHOOTING.md#keybinding-conflicts)** - Conflict resolution
+
+---
+
+*For complete API reference, see [docs.rs/locust](https://docs.rs/locust)*

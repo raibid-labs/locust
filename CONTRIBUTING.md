@@ -45,15 +45,70 @@ cargo run --example basic_nav
 
 ### Using SPARC Methodology
 
-This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) for structured development:
+This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) for systematic Test-Driven Development. SPARC provides a structured approach to feature development with AI assistance.
+
+#### SPARC Phases
+
+1. **Specification** - Define requirements and acceptance criteria
+2. **Pseudocode** - Design algorithms and data structures
+3. **Architecture** - Plan system integration and component design
+4. **Refinement** - TDD implementation with iterative testing
+5. **Completion** - Integration testing and documentation
+
+#### Quick Start with SPARC
 
 ```bash
 # Install Claude Flow (optional but recommended)
 npm install -g claude-flow@alpha
 
-# Run SPARC workflow for new features
-npx claude-flow sparc tdd "Add tooltip plugin"
+# Run complete SPARC TDD workflow for a feature
+npx claude-flow sparc tdd "Add tooltip plugin with auto-positioning"
+
+# Run specific SPARC phases
+npx claude-flow sparc run spec-pseudocode "Design hint algorithm"
+npx claude-flow sparc run architect "Plan plugin architecture"
+
+# View available SPARC modes
+npx claude-flow sparc modes
 ```
+
+#### SPARC Workflow Examples
+
+**Adding a New Plugin:**
+
+```bash
+# 1. Specification phase - Define plugin requirements
+npx claude-flow sparc run spec-pseudocode "Create notification plugin with toast messages"
+
+# 2. Architecture phase - Design integration points
+npx claude-flow sparc run architect "Design notification plugin architecture"
+
+# 3. TDD implementation - Write tests first, then implement
+npx claude-flow sparc tdd "Implement notification plugin with configurable duration"
+
+# 4. Integration - Test with existing plugins
+npx claude-flow sparc run integration "Integrate notification plugin with existing overlays"
+```
+
+**Enhancing Existing Features:**
+
+```bash
+# Run parallel batch processing for multiple related tasks
+npx claude-flow sparc batch "spec-pseudocode,architect" "Add keyboard shortcuts to omnibar"
+
+# Run full pipeline for complex features
+npx claude-flow sparc pipeline "Implement theme hot reload with file watcher"
+```
+
+#### Benefits of SPARC
+
+- **Systematic Development**: Structured approach reduces overlooked requirements
+- **Test-First**: TDD methodology ensures high test coverage (>80%)
+- **Documentation**: Each phase generates documentation artifacts
+- **AI Assistance**: Claude Flow provides intelligent code generation
+- **Quality Assurance**: Built-in checkpoints for validation
+
+For detailed SPARC methodology, see [CLAUDE.md](CLAUDE.md).
 
 ### Branch Strategy
 
@@ -254,6 +309,33 @@ Releases are managed by maintainers:
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
+
+## Related Documentation
+
+Before contributing, please familiarize yourself with these key documents:
+
+### Core Documentation
+- **[README.md](README.md)** - Project overview and quick start
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design and internals
+- **[ROADMAP.md](docs/ROADMAP.md)** - Development timeline and priorities
+
+### Development Guides
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](docs/PLUGIN_DEVELOPMENT_GUIDE.md)** - Comprehensive plugin development guide
+- **[INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - Integration patterns and examples
+- **[API_PATTERNS.md](docs/API_PATTERNS.md)** - Design patterns and best practices
+
+### Reference Documentation
+- **[PLUGINS.md](docs/PLUGINS.md)** - Built-in plugin reference
+- **[CONFIGURATION.md](docs/CONFIGURATION.md)** - Configuration system reference
+- **[THEMING.md](docs/THEMING.md)** - Theming and styling guide
+- **[KEYBINDINGS.md](docs/KEYBINDINGS.md)** - Keybinding configuration
+- **[WIDGET_ADAPTERS.md](docs/WIDGET_ADAPTERS.md)** - Widget adapter system
+
+### Examples and Troubleshooting
+- **[EXAMPLES.md](docs/EXAMPLES.md)** - Detailed example walkthroughs
+- **[CASE_STUDIES.md](docs/CASE_STUDIES.md)** - Real-world integration examples
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[MIGRATION_CHECKLIST.md](docs/MIGRATION_CHECKLIST.md)** - Migration from vanilla ratatui
 
 ---
 

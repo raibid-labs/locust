@@ -1496,6 +1496,37 @@ All overhead is acceptable for the added functionality.
 
 ---
 
+## Related Documentation
+
+These case studies demonstrate concepts from across the Locust documentation:
+
+### Implementation Guides
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integration patterns used in case studies
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Custom plugin development
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration strategies demonstrated
+
+### Design Patterns
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Patterns applied in case studies
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architectural decisions explained
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter usage
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration strategies
+- **[THEMING.md](THEMING.md)** - Theme customization examples
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding configurations
+
+### Plugin Usage
+- **[PLUGINS.md](PLUGINS.md)** - Plugin combinations demonstrated
+- **[EXAMPLES.md](EXAMPLES.md)** - Related code examples
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Project Documentation
+- **[README.md](../README.md)** - Project overview
+- **[ROADMAP.md](ROADMAP.md)** - Future case study topics
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing case studies
+
 *For more information, see:*
 - *[Integration Guide](INTEGRATION_GUIDE.md)*
 - *[Troubleshooting](TROUBLESHOOTING.md)*

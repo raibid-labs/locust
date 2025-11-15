@@ -1196,6 +1196,34 @@ mod tests {
 9. **Version your APIs**: Use semantic versioning
 10. **Provide examples**: Show common use cases
 
+## Related Documentation
+
+This API patterns guide connects with other Locust development documentation:
+
+### Development Guides
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Apply patterns to plugin development
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - Integration patterns in practice
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architectural patterns and design
+
+### Pattern Applications
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world pattern implementations
+- **[EXAMPLES.md](EXAMPLES.md)** - Pattern usage in examples
+- **[PLUGINS.md](PLUGINS.md)** - Built-in plugin patterns
+
+### Configuration Patterns
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration design patterns
+- **[THEMING.md](THEMING.md)** - Theme system patterns
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding patterns
+
+### Reference
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Adapter pattern implementations
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Anti-patterns to avoid
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration patterns
+
+### Project Documentation
+- **[README.md](../README.md)** - Pattern overview
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing pattern documentation
+
 ---
 
 *For more patterns and examples, see [Plugin Development Guide](PLUGIN_DEVELOPMENT_GUIDE.md) and [Case Studies](CASE_STUDIES.md).*

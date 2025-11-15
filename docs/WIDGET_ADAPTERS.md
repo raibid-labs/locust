@@ -359,6 +359,35 @@ Contributions welcome! Areas for improvement:
 - Enhanced spatial query algorithms
 - Better tree widget support
 
+## Related Documentation
+
+This widget adapters reference connects with other Locust documentation:
+
+### Core Documentation
+- **[PLUGINS.md](PLUGINS.md#navplugin)** - Navigation plugin that uses adapters
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md#widget-adapters)** - Integrate widget adapters
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Adapter pattern architecture
+
+### Development
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Create custom adapters
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Adapter design patterns
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contributing new adapters
+
+### Examples
+- **[EXAMPLES.md](EXAMPLES.md)** - Widget adapter usage examples
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world adapter implementations
+
+### Configuration
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configure widget adapters
+
+### Troubleshooting
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Adapter issues and solutions
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migrating to widget adapters
+
+### Project Documentation
+- **[README.md](../README.md)** - Widget adapter overview
+- **[ROADMAP.md](ROADMAP.md)** - Future adapter improvements
+
 ## License
 
 Same as Locust project (see main LICENSE file).

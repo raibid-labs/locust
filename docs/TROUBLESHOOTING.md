@@ -1416,6 +1416,35 @@ mod diagnostics {
 
 ---
 
+## Related Documentation
+
+This troubleshooting guide connects with other Locust documentation to help you resolve issues:
+
+### Getting Help
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md#common-pitfalls)** - Integration issues
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Plugin development issues
+- **[MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md)** - Migration troubleshooting
+
+### System Documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Understand system behavior
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Configuration issues
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding conflicts
+
+### Plugin Issues
+- **[PLUGINS.md](PLUGINS.md)** - Built-in plugin behavior
+- **[WIDGET_ADAPTERS.md](WIDGET_ADAPTERS.md)** - Widget adapter issues
+- **[THEMING.md](THEMING.md#troubleshooting)** - Theme troubleshooting
+
+### Examples & Patterns
+- **[EXAMPLES.md](EXAMPLES.md)** - Working code examples
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world solutions
+- **[API_PATTERNS.md](API_PATTERNS.md)** - Best practices to avoid issues
+
+### Project Documentation
+- **[README.md](../README.md)** - Quick start guide
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Report bugs and issues
+- **[ROADMAP.md](ROADMAP.md)** - Known limitations and future fixes
+
 *For more information, see:*
 - *[Integration Guide](INTEGRATION_GUIDE.md)*
 - *[Plugin Development](PLUGIN_DEVELOPMENT_GUIDE.md)*

@@ -391,8 +391,43 @@ match LocustConfig::from_file(path) {
 6. **Version your config files** - Track configuration changes in version control
 7. **Test edge cases** - Validate unusual configurations in tests
 
-## See Also
+## Related Documentation
 
-- [Plugin Development Guide](PLUGINS.md) - How to make plugins configurable
-- [Examples](../examples/config_demo.rs) - Working code examples
-- [API Documentation](https://docs.rs/locust) - Full API reference
+Comprehensive cross-references to help you use Locust's configuration system effectively:
+
+### Core Configuration
+- **[THEMING.md](THEMING.md)** - Theme configuration and color schemes
+- **[KEYBINDINGS.md](KEYBINDINGS.md)** - Keybinding configuration
+- **[PLUGINS.md](PLUGINS.md)** - Plugin-specific configuration options
+
+### Implementation Guides
+- **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** - How to load and use configuration
+- **[PLUGIN_DEVELOPMENT_GUIDE.md](PLUGIN_DEVELOPMENT_GUIDE.md)** - Make custom plugins configurable
+- **[API_PATTERNS.md](API_PATTERNS.md#configuration-patterns)** - Configuration design patterns
+
+### System Documentation
+- **[ARCHITECTURE.md](ARCHITECTURE.md#configuration-layer)** - Configuration architecture
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md#configuration-issues)** - Configuration troubleshooting
+
+### Examples
+- **[EXAMPLES.md](EXAMPLES.md)** - Configuration examples in working applications
+- **[CASE_STUDIES.md](CASE_STUDIES.md)** - Real-world configuration usage
+
+### Project Documentation
+- **[README.md](../README.md#configuration)** - Quick configuration overview
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Configuration testing guidelines
+
+---
+
+## Related Documentation
+
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - How to integrate configuration into your app
+- **[Theming](THEMING.md)** - Theme configuration reference  
+- **[Keybindings](KEYBINDINGS.md)** - Keybinding configuration
+- **[Plugin Development](PLUGIN_DEVELOPMENT_GUIDE.md)** - Per-plugin configuration
+- **[Troubleshooting](TROUBLESHOOTING.md#configuration-issues)** - Configuration troubleshooting
+- **[Examples](EXAMPLES.md)** - Configuration examples in practice
+
+---
+
+*For complete API reference, see [docs.rs/locust](https://docs.rs/locust)*

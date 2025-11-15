@@ -25,10 +25,9 @@ pub use crate::core::overlay::{OverlayLayer, OverlayState};
 // Built-in plugins
 pub use crate::plugins::nav::{NavConfig, NavMode, NavPlugin};
 pub use crate::plugins::omnibar::{BorderType, OmnibarConfig, OmnibarMode, OmnibarPlugin};
-pub use crate::plugins::tooltip::{TooltipConfig, TooltipPlugin, TooltipStyle, Position as TooltipPosition};
+pub use crate::plugins::tooltip::{TooltipConfig, TooltipPlugin, TooltipStyle};
 pub use crate::plugins::highlight::{
-    HighlightConfig, HighlightPlugin, Tour, TourStep,
-    AnimationType, MessagePosition
+    HighlightConfig, HighlightPlugin, Tour, TourStep, MessagePosition
 };
 
 // Re-export commonly used ratatui types
