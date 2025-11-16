@@ -62,6 +62,10 @@ fmt-check:
 check:
     cargo check --all-features --all-targets
 
+# Check that all examples compile
+check-examples:
+    cargo check --examples --all-features
+
 # Build documentation
 doc:
     cargo doc --all-features --no-deps --open
@@ -105,7 +109,7 @@ demos-all:
     done
 
 # Full CI check (what CI runs)
-ci: fmt-check lint test
+ci: fmt-check lint check-examples test
 
 # Quick development check (fast feedback)
 dev: check test-unit

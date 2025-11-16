@@ -177,61 +177,165 @@ impl Theme {
             name: "Dark".to_string(),
             description: "Default dark theme with blue accents".to_string(),
             colors: ColorScheme {
-                background: ColorDef::Rgb { r: 30, g: 30, b: 30 },
-                foreground: ColorDef::Rgb { r: 220, g: 220, b: 220 },
-                primary: ColorDef::Rgb { r: 100, g: 150, b: 255 },
-                secondary: ColorDef::Rgb { r: 150, g: 100, b: 255 },
-                accent: ColorDef::Rgb { r: 255, g: 200, b: 100 },
-                success: ColorDef::Rgb { r: 100, g: 255, b: 100 },
-                warning: ColorDef::Rgb { r: 255, g: 200, b: 100 },
-                error: ColorDef::Rgb { r: 255, g: 100, b: 100 },
-                info: ColorDef::Rgb { r: 100, g: 200, b: 255 },
-                border: ColorDef::Rgb { r: 80, g: 80, b: 80 },
-                border_focused: ColorDef::Rgb { r: 100, g: 150, b: 255 },
-                selection: ColorDef::Rgb { r: 60, g: 90, b: 150 },
-                highlight: ColorDef::Rgb { r: 255, g: 200, b: 100 },
-                text_normal: ColorDef::Rgb { r: 220, g: 220, b: 220 },
-                text_muted: ColorDef::Rgb { r: 140, g: 140, b: 140 },
-                text_emphasis: ColorDef::Rgb { r: 255, g: 255, b: 255 },
+                background: ColorDef::Rgb {
+                    r: 30,
+                    g: 30,
+                    b: 30,
+                },
+                foreground: ColorDef::Rgb {
+                    r: 220,
+                    g: 220,
+                    b: 220,
+                },
+                primary: ColorDef::Rgb {
+                    r: 100,
+                    g: 150,
+                    b: 255,
+                },
+                secondary: ColorDef::Rgb {
+                    r: 150,
+                    g: 100,
+                    b: 255,
+                },
+                accent: ColorDef::Rgb {
+                    r: 255,
+                    g: 200,
+                    b: 100,
+                },
+                success: ColorDef::Rgb {
+                    r: 100,
+                    g: 255,
+                    b: 100,
+                },
+                warning: ColorDef::Rgb {
+                    r: 255,
+                    g: 200,
+                    b: 100,
+                },
+                error: ColorDef::Rgb {
+                    r: 255,
+                    g: 100,
+                    b: 100,
+                },
+                info: ColorDef::Rgb {
+                    r: 100,
+                    g: 200,
+                    b: 255,
+                },
+                border: ColorDef::Rgb {
+                    r: 80,
+                    g: 80,
+                    b: 80,
+                },
+                border_focused: ColorDef::Rgb {
+                    r: 100,
+                    g: 150,
+                    b: 255,
+                },
+                selection: ColorDef::Rgb {
+                    r: 60,
+                    g: 90,
+                    b: 150,
+                },
+                highlight: ColorDef::Rgb {
+                    r: 255,
+                    g: 200,
+                    b: 100,
+                },
+                text_normal: ColorDef::Rgb {
+                    r: 220,
+                    g: 220,
+                    b: 220,
+                },
+                text_muted: ColorDef::Rgb {
+                    r: 140,
+                    g: 140,
+                    b: 140,
+                },
+                text_emphasis: ColorDef::Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                },
             },
             styles: StyleScheme {
                 normal: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 220, g: 220, b: 220 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 220,
+                        g: 220,
+                        b: 220,
+                    }),
                     bg: None,
                     modifiers: vec![],
                 },
                 focused: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 100, g: 150, b: 255 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 100,
+                        g: 150,
+                        b: 255,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
                 selected: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 255, g: 255, b: 255 }),
-                    bg: Some(ColorDef::Rgb { r: 60, g: 90, b: 150 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                    }),
+                    bg: Some(ColorDef::Rgb {
+                        r: 60,
+                        g: 90,
+                        b: 150,
+                    }),
                     modifiers: vec![],
                 },
                 disabled: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 100, g: 100, b: 100 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 100,
+                        g: 100,
+                        b: 100,
+                    }),
                     bg: None,
                     modifiers: vec!["dim".to_string()],
                 },
                 hint: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 140, g: 140, b: 140 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 140,
+                        g: 140,
+                        b: 140,
+                    }),
                     bg: None,
                     modifiers: vec!["italic".to_string()],
                 },
                 hint_matched: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 100, g: 150, b: 255 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 100,
+                        g: 150,
+                        b: 255,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
                 tooltip: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 220, g: 220, b: 220 }),
-                    bg: Some(ColorDef::Rgb { r: 50, g: 50, b: 50 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 220,
+                        g: 220,
+                        b: 220,
+                    }),
+                    bg: Some(ColorDef::Rgb {
+                        r: 50,
+                        g: 50,
+                        b: 50,
+                    }),
                     modifiers: vec![],
                 },
                 highlight_border: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 255, g: 200, b: 100 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 255,
+                        g: 200,
+                        b: 100,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
@@ -244,61 +348,149 @@ impl Theme {
             name: "Light".to_string(),
             description: "Light theme with dark text".to_string(),
             colors: ColorScheme {
-                background: ColorDef::Rgb { r: 250, g: 250, b: 250 },
-                foreground: ColorDef::Rgb { r: 40, g: 40, b: 40 },
-                primary: ColorDef::Rgb { r: 50, g: 100, b: 200 },
-                secondary: ColorDef::Rgb { r: 100, g: 50, b: 200 },
-                accent: ColorDef::Rgb { r: 200, g: 100, b: 0 },
+                background: ColorDef::Rgb {
+                    r: 250,
+                    g: 250,
+                    b: 250,
+                },
+                foreground: ColorDef::Rgb {
+                    r: 40,
+                    g: 40,
+                    b: 40,
+                },
+                primary: ColorDef::Rgb {
+                    r: 50,
+                    g: 100,
+                    b: 200,
+                },
+                secondary: ColorDef::Rgb {
+                    r: 100,
+                    g: 50,
+                    b: 200,
+                },
+                accent: ColorDef::Rgb {
+                    r: 200,
+                    g: 100,
+                    b: 0,
+                },
                 success: ColorDef::Rgb { r: 0, g: 150, b: 0 },
-                warning: ColorDef::Rgb { r: 200, g: 120, b: 0 },
+                warning: ColorDef::Rgb {
+                    r: 200,
+                    g: 120,
+                    b: 0,
+                },
                 error: ColorDef::Rgb { r: 200, g: 0, b: 0 },
-                info: ColorDef::Rgb { r: 0, g: 120, b: 200 },
-                border: ColorDef::Rgb { r: 200, g: 200, b: 200 },
-                border_focused: ColorDef::Rgb { r: 50, g: 100, b: 200 },
-                selection: ColorDef::Rgb { r: 200, g: 220, b: 255 },
-                highlight: ColorDef::Rgb { r: 255, g: 220, b: 150 },
-                text_normal: ColorDef::Rgb { r: 40, g: 40, b: 40 },
-                text_muted: ColorDef::Rgb { r: 140, g: 140, b: 140 },
+                info: ColorDef::Rgb {
+                    r: 0,
+                    g: 120,
+                    b: 200,
+                },
+                border: ColorDef::Rgb {
+                    r: 200,
+                    g: 200,
+                    b: 200,
+                },
+                border_focused: ColorDef::Rgb {
+                    r: 50,
+                    g: 100,
+                    b: 200,
+                },
+                selection: ColorDef::Rgb {
+                    r: 200,
+                    g: 220,
+                    b: 255,
+                },
+                highlight: ColorDef::Rgb {
+                    r: 255,
+                    g: 220,
+                    b: 150,
+                },
+                text_normal: ColorDef::Rgb {
+                    r: 40,
+                    g: 40,
+                    b: 40,
+                },
+                text_muted: ColorDef::Rgb {
+                    r: 140,
+                    g: 140,
+                    b: 140,
+                },
                 text_emphasis: ColorDef::Rgb { r: 0, g: 0, b: 0 },
             },
             styles: StyleScheme {
                 normal: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 40, g: 40, b: 40 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 40,
+                        g: 40,
+                        b: 40,
+                    }),
                     bg: None,
                     modifiers: vec![],
                 },
                 focused: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 50, g: 100, b: 200 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 50,
+                        g: 100,
+                        b: 200,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
                 selected: StyleDef {
                     fg: Some(ColorDef::Rgb { r: 0, g: 0, b: 0 }),
-                    bg: Some(ColorDef::Rgb { r: 200, g: 220, b: 255 }),
+                    bg: Some(ColorDef::Rgb {
+                        r: 200,
+                        g: 220,
+                        b: 255,
+                    }),
                     modifiers: vec![],
                 },
                 disabled: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 180, g: 180, b: 180 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 180,
+                        g: 180,
+                        b: 180,
+                    }),
                     bg: None,
                     modifiers: vec!["dim".to_string()],
                 },
                 hint: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 140, g: 140, b: 140 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 140,
+                        g: 140,
+                        b: 140,
+                    }),
                     bg: None,
                     modifiers: vec!["italic".to_string()],
                 },
                 hint_matched: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 50, g: 100, b: 200 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 50,
+                        g: 100,
+                        b: 200,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
                 tooltip: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 40, g: 40, b: 40 }),
-                    bg: Some(ColorDef::Rgb { r: 240, g: 240, b: 240 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 40,
+                        g: 40,
+                        b: 40,
+                    }),
+                    bg: Some(ColorDef::Rgb {
+                        r: 240,
+                        g: 240,
+                        b: 240,
+                    }),
                     modifiers: vec![],
                 },
                 highlight_border: StyleDef {
-                    fg: Some(ColorDef::Rgb { r: 200, g: 100, b: 0 }),
+                    fg: Some(ColorDef::Rgb {
+                        r: 200,
+                        g: 100,
+                        b: 0,
+                    }),
                     bg: None,
                     modifiers: vec!["bold".to_string()],
                 },
@@ -308,13 +500,12 @@ impl Theme {
 
     pub fn from_file(path: &Path) -> Result<Self, ThemeError> {
         let content = fs::read_to_string(path)?;
-        toml::from_str(&content)
-            .map_err(|e| ThemeError::ParseError(e.to_string()))
+        toml::from_str(&content).map_err(|e| ThemeError::ParseError(e.to_string()))
     }
 
     pub fn to_file(&self, path: &Path) -> Result<(), ThemeError> {
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| ThemeError::ParseError(e.to_string()))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| ThemeError::ParseError(e.to_string()))?;
         fs::write(path, content)?;
         Ok(())
     }
@@ -346,7 +537,11 @@ mod tests {
 
     #[test]
     fn test_color_def_rgb() {
-        let color = ColorDef::Rgb { r: 100, g: 150, b: 200 };
+        let color = ColorDef::Rgb {
+            r: 100,
+            g: 150,
+            b: 200,
+        };
         match color.to_color() {
             Color::Rgb(r, g, b) => {
                 assert_eq!(r, 100);

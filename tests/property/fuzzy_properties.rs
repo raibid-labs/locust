@@ -9,7 +9,7 @@ proptest! {
     #[test]
     fn test_fuzzy_score_range(query in "\\PC+", text in "\\PC+") {
         let matcher = FuzzyMatcher::new();
-        if let Some(score) = matcher.score(&query, &text) {
+        if let Some((score, _positions)) = matcher.score(&query, &text) {
             prop_assert!(score >= 0.0 && score <= 100.0, "Score {} out of range for query='{}', text='{}'", score, query, text);
         }
     }
@@ -24,12 +24,12 @@ proptest! {
     #[test]
     fn test_fuzzy_exact_match_highest_score(text in "[a-zA-Z]{1,20}") {
         let matcher = FuzzyMatcher::new();
-        let exact_score = matcher.score(&text, &text).unwrap_or(0.0);
+        let exact_score = matcher.score(&text, &text).map(|(s, _)| s).unwrap_or(0.0);
 
         // Generate similar but not exact text
         let mut modified = text.clone();
         modified.push('x');
-        let partial_score = matcher.score(&text, &modified).unwrap_or(0.0);
+        let partial_score = matcher.score(&text, &modified).map(|(s, _)| s).unwrap_or(0.0);
 
         prop_assert!(exact_score >= partial_score, "Exact match should score higher: {} vs {}", exact_score, partial_score);
     }
@@ -73,7 +73,7 @@ proptest! {
 
         let score = matcher.score(&long_query, &text);
         // Long query might not match short text
-        prop_assert!(score.is_none() || score.unwrap() < 100.0);
+        prop_assert!(score.is_none() || score.map(|(s, _)| s).unwrap() < 100.0);
     }
 
     #[test]
@@ -129,8 +129,8 @@ proptest! {
             text.chars().nth(text.len() - 1).unwrap_or('y')
         );
 
-        let score_consecutive = matcher.score(consecutive, &text).unwrap_or(0.0);
-        let score_non_consecutive = matcher.score(&non_consecutive, &text).unwrap_or(0.0);
+        let score_consecutive = matcher.score(consecutive, &text).map(|(s, _)| s).unwrap_or(0.0);
+        let score_non_consecutive = matcher.score(&non_consecutive, &text).map(|(s, _)| s).unwrap_or(0.0);
 
         // Consecutive should generally score higher
         prop_assert!(score_consecutive >= score_non_consecutive * 0.8); // Allow some variance

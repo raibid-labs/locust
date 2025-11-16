@@ -19,7 +19,9 @@ impl ThemeManager {
         // Add built-in themes
         let dark = Theme::default_dark();
         let light = Theme::default_light();
-        manager.available_themes.insert(dark.name.clone(), dark.clone());
+        manager
+            .available_themes
+            .insert(dark.name.clone(), dark.clone());
         manager.available_themes.insert(light.name.clone(), light);
         manager.current_theme = dark;
 
@@ -33,12 +35,14 @@ impl ThemeManager {
             return Ok(manager);
         }
 
-        let entries = fs::read_dir(dir)
-            .map_err(|e| ThemeError::LoadError(format!("Failed to read themes directory: {}", e)))?;
+        let entries = fs::read_dir(dir).map_err(|e| {
+            ThemeError::LoadError(format!("Failed to read themes directory: {}", e))
+        })?;
 
         for entry in entries {
-            let entry = entry
-                .map_err(|e| ThemeError::LoadError(format!("Failed to read directory entry: {}", e)))?;
+            let entry = entry.map_err(|e| {
+                ThemeError::LoadError(format!("Failed to read directory entry: {}", e))
+            })?;
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("toml") {
@@ -57,7 +61,8 @@ impl ThemeManager {
     }
 
     pub fn set_theme(&mut self, name: &str) -> Result<(), ThemeError> {
-        let theme = self.available_themes
+        let theme = self
+            .available_themes
             .get(name)
             .ok_or_else(|| ThemeError::NotFound(name.to_string()))?;
         self.current_theme = theme.clone();

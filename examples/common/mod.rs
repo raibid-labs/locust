@@ -1,11 +1,9 @@
 /// Common utilities for Locust examples
 ///
 /// Provides shared helpers for layout, timing, mock data, and event handling.
-
 use chrono::{DateTime, Local, TimeZone};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use std::collections::VecDeque;
-use std::io;
 use std::time::Instant;
 
 /// Create a centered rectangle within the given area
@@ -68,7 +66,11 @@ impl FpsCounter {
             return 0.0;
         }
 
-        let elapsed = self.frame_times.back().unwrap().duration_since(*self.frame_times.front().unwrap());
+        let elapsed = self
+            .frame_times
+            .back()
+            .unwrap()
+            .duration_since(*self.frame_times.front().unwrap());
         let secs = elapsed.as_secs_f32();
 
         if secs > 0.0 {
@@ -98,7 +100,7 @@ impl Default for FpsCounter {
 /// Mock data generators for examples
 pub mod mock {
     use super::*;
-    use rand::Rng;
+    use rand::Rng as _;
 
     /// Log entry for log viewer examples
     #[derive(Debug, Clone)]
@@ -132,7 +134,7 @@ pub mod mock {
 
     /// Generate mock log entries
     pub fn generate_logs(count: usize) -> Vec<LogEntry> {
-        let mut rng = rand::rng();
+        let mut rng = rand::thread_rng();
         let messages = [
             "Server started successfully",
             "Connection established",
@@ -149,7 +151,7 @@ pub mod mock {
 
         (0..count)
             .map(|i| {
-                let level = match rng.random_range(0..10) {
+                let level = match rng.gen_range(0..10) {
                     0..=5 => LogLevel::Info,
                     6..=7 => LogLevel::Debug,
                     8 => LogLevel::Warn,
@@ -162,8 +164,8 @@ pub mod mock {
                         .single()
                         .unwrap(),
                     level,
-                    message: messages[rng.random_range(0..messages.len())].to_string(),
-                    source: sources[rng.random_range(0..sources.len())].to_string(),
+                    message: messages[rng.gen_range(0..messages.len())].to_string(),
+                    source: sources[rng.gen_range(0..sources.len())].to_string(),
                 }
             })
             .collect()
@@ -181,7 +183,7 @@ pub mod mock {
 
     /// Generate mock git commits
     pub fn generate_commits(count: usize) -> Vec<Commit> {
-        let mut rng = rand::rng();
+        let mut rng = rand::thread_rng();
         let authors = ["Alice", "Bob", "Charlie", "Diana"];
         let messages = [
             "Fix critical bug in authentication",
@@ -207,22 +209,22 @@ pub mod mock {
 
         (0..count)
             .map(|i| {
-                let hash = format!("{:07x}", rng.random_range(0x1000000..0xfffffff));
-                let num_files = rng.random_range(1..4);
+                let hash = format!("{:07x}", rng.gen_range(0x1000000..0xfffffff));
+                let num_files = rng.gen_range(1..4);
                 let mut changed_files: Vec<String> = (0..num_files)
-                    .map(|_| files[rng.random_range(0..files.len())].to_string())
+                    .map(|_| files[rng.gen_range(0..files.len())].to_string())
                     .collect();
                 changed_files.sort();
                 changed_files.dedup();
 
                 Commit {
                     hash,
-                    author: authors[rng.random_range(0..authors.len())].to_string(),
+                    author: authors[rng.gen_range(0..authors.len())].to_string(),
                     date: Local
                         .timestamp_opt(1705228800 - (i * 3600) as i64, 0)
                         .single()
                         .unwrap(),
-                    message: messages[rng.random_range(0..messages.len())].to_string(),
+                    message: messages[rng.gen_range(0..messages.len())].to_string(),
                     files_changed: changed_files,
                 }
             })
@@ -262,7 +264,7 @@ pub mod mock {
 
     /// Generate mock processes
     pub fn generate_processes(count: usize) -> Vec<Process> {
-        let mut rng = rand::rng();
+        let mut rng = rand::thread_rng();
         let names = [
             "chrome", "firefox", "vscode", "terminal", "docker", "node", "python", "postgres",
             "redis", "nginx",
@@ -271,8 +273,8 @@ pub mod mock {
 
         (0..count)
             .map(|i| {
-                let name = names[rng.random_range(0..names.len())].to_string();
-                let status = match rng.random_range(0..10) {
+                let name = names[rng.gen_range(0..names.len())].to_string();
+                let status = match rng.gen_range(0..10) {
                     0..=6 => ProcessStatus::Running,
                     7..=8 => ProcessStatus::Sleeping,
                     _ => ProcessStatus::Stopped,
@@ -281,10 +283,10 @@ pub mod mock {
                 Process {
                     pid: 1000 + i as u32,
                     name: name.clone(),
-                    cpu_percent: rng.random_range(0.0..100.0),
-                    mem_bytes: rng.random_range(100_000_000..2_000_000_000),
+                    cpu_percent: rng.gen_range(0.0..100.0),
+                    mem_bytes: rng.gen_range(100_000_000..2_000_000_000),
                     status,
-                    user: users[rng.random_range(0..users.len())].to_string(),
+                    user: users[rng.gen_range(0..users.len())].to_string(),
                     command: format!("/usr/bin/{} --config /etc/{}.conf", name, name),
                 }
             })

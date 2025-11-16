@@ -23,7 +23,6 @@
 /// └───────────────────────┴────────────┴────────────┘
 /// Branch: main | Commits: 4 | Press 'f' for hints
 /// ```
-
 mod common;
 
 use chrono::{DateTime, Local};
@@ -32,9 +31,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{
-    HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin,
-};
+use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -341,7 +338,11 @@ impl GitBrowser {
                 "bugfix/memory-leak".to_string(),
             ],
             current_branch: "main".to_string(),
-            tags: vec!["v1.0.0".to_string(), "v1.1.0".to_string(), "v2.0.0-beta".to_string()],
+            tags: vec![
+                "v1.0.0".to_string(),
+                "v1.1.0".to_string(),
+                "v2.0.0-beta".to_string(),
+            ],
             search_query: String::new(),
             locust,
             view_mode: ViewMode::Commits,
@@ -756,7 +757,8 @@ impl GitBrowser {
             self.commits.len(),
             fps
         );
-        let help = "Tab: switch panel | Enter: select | Ctrl+P: commands | 't': tour | Ctrl+C: quit";
+        let help =
+            "Tab: switch panel | Enter: select | Ctrl+P: commands | 't': tour | Ctrl+C: quit";
 
         let status_text = format!("{} | {}", status, help);
         let status_widget = Paragraph::new(status_text)

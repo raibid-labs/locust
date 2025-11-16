@@ -1,0 +1,19 @@
+{
+  "$schema": "https://claude.ai/schemas/project-config.json",
+  "version": "1.0.0",
+  "extends": "https://raw.githubusercontent.com/raibid-labs/workspace/main/.claude/base-project.json",
+  "description": "Claude Code configuration for locust",
+  "project": {
+    "name": "locust",
+    "type": "rust-service",
+    "repository": "https://github.com/raibid-labs/locust"
+  },
+  "language": {
+    "primary": "rust"
+  },
+  "customization": {
+    "mcpServers": {},
+    "workflows": {},
+    "agents": []
+  }
+}

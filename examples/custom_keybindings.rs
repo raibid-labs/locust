@@ -41,7 +41,9 @@ impl App {
         Self {
             keymap,
             mode: AppMode::Normal,
-            status_message: "Press 'c' to check for conflicts, 'a' to add binding, 'r' to remove binding".to_string(),
+            status_message:
+                "Press 'c' to check for conflicts, 'a' to add binding, 'r' to remove binding"
+                    .to_string(),
         }
     }
 
@@ -135,7 +137,11 @@ fn ui<B: Backend>(f: &mut Frame, app: &App) {
 
     // Title
     let title = Paragraph::new("Custom Keybindings Demo")
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center)
         .block(
             Block::default()
@@ -148,9 +154,12 @@ fn ui<B: Backend>(f: &mut Frame, app: &App) {
     let mut bindings_list = Vec::new();
 
     // Global bindings
-    bindings_list.push(ListItem::new(Line::from(vec![
-        Span::styled("Global Bindings", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-    ])));
+    bindings_list.push(ListItem::new(Line::from(vec![Span::styled(
+        "Global Bindings",
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    )])));
     for (action, binding) in &app.keymap.global {
         let key_str = format!("{:?}", binding.key);
         bindings_list.push(ListItem::new(format!("  {} → {}", key_str, action)));
@@ -159,15 +168,18 @@ fn ui<B: Backend>(f: &mut Frame, app: &App) {
     // Plugin bindings
     for (plugin, bindings) in &app.keymap.plugins {
         bindings_list.push(ListItem::new(""));
-        bindings_list.push(ListItem::new(Line::from(vec![
-            Span::styled(
-                format!("{} Plugin", plugin),
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-            ),
-        ])));
+        bindings_list.push(ListItem::new(Line::from(vec![Span::styled(
+            format!("{} Plugin", plugin),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )])));
         for (action, binding) in bindings {
             let key_str = format!("{:?}", binding.key);
-            bindings_list.push(ListItem::new(format!("  {} → {}.{}", key_str, plugin, action)));
+            bindings_list.push(ListItem::new(format!(
+                "  {} → {}.{}",
+                key_str, plugin, action
+            )));
         }
     }
 

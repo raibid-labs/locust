@@ -91,10 +91,7 @@ impl LocustContext {
     ///     println!("Hint key: {}", nav_config.hint_key);
     /// }
     /// ```
-    pub fn get_plugin_config<T: serde::de::DeserializeOwned>(
-        &self,
-        plugin_id: &str,
-    ) -> Option<T> {
+    pub fn get_plugin_config<T: serde::de::DeserializeOwned>(&self, plugin_id: &str) -> Option<T> {
         self.config.as_ref()?.get_plugin_config(plugin_id)
     }
 
@@ -248,12 +245,9 @@ where
     pub fn update_config(&mut self, config: Config) -> Result<(), ConfigError> {
         // Validate before applying
         let errors = config.validate();
-        let has_errors = errors.iter().any(|e| {
-            matches!(
-                e.severity,
-                crate::core::config::Severity::Error
-            )
-        });
+        let has_errors = errors
+            .iter()
+            .any(|e| matches!(e.severity, crate::core::config::Severity::Error));
 
         if has_errors {
             return Err(ConfigError::NoConfigPath); // TODO: Better error type

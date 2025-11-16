@@ -32,7 +32,6 @@
 /// └─────────────────────────────────────────────────┘
 /// Press 'f' for hints | Ctrl+P for commands
 /// ```
-
 mod common;
 
 use chrono::Local;
@@ -41,17 +40,13 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{
-    HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin,
-};
+use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{
-        Block, Borders, Cell, List, ListItem, ListState, Paragraph, Row, Table, Wrap,
-    },
+    widgets::{Block, Borders, Cell, List, ListItem, ListState, Paragraph, Row, Table, Wrap},
     Frame, Terminal,
 };
 use std::{
@@ -614,10 +609,9 @@ impl DatabaseTool {
             KeyCode::Char(c) => self.query_editor.insert_char(c),
             KeyCode::Backspace => self.query_editor.delete_char(),
             KeyCode::Enter => {
-                self.query_editor.lines.insert(
-                    self.query_editor.cursor_line + 1,
-                    String::new(),
-                );
+                self.query_editor
+                    .lines
+                    .insert(self.query_editor.cursor_line + 1, String::new());
                 self.query_editor.cursor_line += 1;
                 self.query_editor.cursor_col = 0;
             }
@@ -707,7 +701,11 @@ impl DatabaseTool {
     }
 
     fn describe_table(&mut self, table: &SchemaTable) {
-        let columns = vec!["Column".to_string(), "Type".to_string(), "Nullable".to_string()];
+        let columns = vec![
+            "Column".to_string(),
+            "Type".to_string(),
+            "Nullable".to_string(),
+        ];
         let rows: Vec<Vec<String>> = table
             .columns
             .iter()
@@ -784,10 +782,9 @@ impl DatabaseTool {
                         .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD),
                 ))),
-                SchemaItem::Table(table) => ListItem::new(format!(
-                    "  📊 {} ({} rows)",
-                    table.name, table.row_count
-                )),
+                SchemaItem::Table(table) => {
+                    ListItem::new(format!("  📊 {} ({} rows)", table.name, table.row_count))
+                }
                 SchemaItem::View(view) => ListItem::new(format!("  👁  {}", view.name)),
                 SchemaItem::Index(index) => {
                     let unique = if index.unique { "UNIQUE" } else { "" };
@@ -831,17 +828,14 @@ impl DatabaseTool {
             .enumerate()
             .map(|(i, line)| {
                 let prefix = format!("{:3} │ ", i + 1);
-                let mut spans = vec![Span::styled(
-                    prefix,
-                    Style::default().fg(Color::DarkGray),
-                )];
+                let mut spans = vec![Span::styled(prefix, Style::default().fg(Color::DarkGray))];
 
                 // Simple syntax highlighting
                 let words: Vec<&str> = line.split_whitespace().collect();
                 for (j, word) in words.iter().enumerate() {
                     let style = match word.to_uppercase().as_str() {
-                        "SELECT" | "FROM" | "WHERE" | "ORDER" | "BY" | "LIMIT" | "JOIN"
-                        | "AND" | "OR" => Style::default().fg(Color::Cyan),
+                        "SELECT" | "FROM" | "WHERE" | "ORDER" | "BY" | "LIMIT" | "JOIN" | "AND"
+                        | "OR" => Style::default().fg(Color::Cyan),
                         _ => Style::default().fg(Color::White),
                     };
 
@@ -942,7 +936,8 @@ impl DatabaseTool {
 
         let fps = format!("{:.1} FPS", self.fps_counter.fps());
         let status = format!("{} | History: {} | {}", db_info, self.history.len(), fps);
-        let help = "Tab: switch panel | Ctrl+E: execute | Ctrl+P: commands | 't': tour | Ctrl+C: quit";
+        let help =
+            "Tab: switch panel | Ctrl+E: execute | Ctrl+P: commands | 't': tour | Ctrl+C: quit";
 
         let status_text = format!("{} | {}", status, help);
         let status_widget = Paragraph::new(status_text)

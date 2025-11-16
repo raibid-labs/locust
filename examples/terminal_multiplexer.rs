@@ -25,7 +25,6 @@
 /// └─────────────────────────────────────────────────┘
 /// Press 'f' for hints | Ctrl+P for commands
 /// ```
-
 mod common;
 
 use chrono::Local;
@@ -34,9 +33,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{
-    HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin,
-};
+use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -206,8 +203,12 @@ impl Pane {
                 lines.push_back("total 48".to_string());
                 lines.push_back("drwxr-xr-x  6 user  staff   192 Jan 14 10:30 .".to_string());
                 lines.push_back("drwxr-xr-x  3 user  staff    96 Jan 13 09:15 ..".to_string());
-                lines.push_back("-rw-r--r--  1 user  staff  1234 Jan 14 10:29 file1.txt".to_string());
-                lines.push_back("-rw-r--r--  1 user  staff  5678 Jan 14 10:30 file2.txt".to_string());
+                lines.push_back(
+                    "-rw-r--r--  1 user  staff  1234 Jan 14 10:29 file1.txt".to_string(),
+                );
+                lines.push_back(
+                    "-rw-r--r--  1 user  staff  5678 Jan 14 10:30 file2.txt".to_string(),
+                );
                 lines.push_back("drwxr-xr-x  4 user  staff   128 Jan 14 09:00 src".to_string());
                 lines.push_back("$ _".to_string());
                 lines

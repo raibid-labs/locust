@@ -26,9 +26,7 @@ fn benchmark_plugin_event_handling(c: &mut Criterion) {
 
         let event = Event::Key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE));
 
-        b.iter(|| {
-            LocustPlugin::<TestBackend>::on_event(&mut plugin, black_box(&event), &mut ctx)
-        });
+        b.iter(|| LocustPlugin::<TestBackend>::on_event(&mut plugin, black_box(&event), &mut ctx));
     });
 
     // Benchmark multiple plugins

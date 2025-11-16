@@ -161,45 +161,68 @@ fn ui<B: Backend>(f: &mut Frame, app: &App) {
     let color_lines = vec![
         Line::from(vec![
             Span::styled("Background: ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.background.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.background.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Foreground: ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.foreground.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.foreground.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Primary:    ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.primary.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.primary.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Secondary:  ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.secondary.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.secondary.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Accent:     ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.accent.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.accent.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Success:    ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.success.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.success.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Warning:    ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.warning.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.warning.to_color()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("Error:      ", theme.styles.normal.to_style()),
-            Span::styled("████", Style::default().bg(current_theme.colors.error.to_color())),
+            Span::styled(
+                "████",
+                Style::default().bg(current_theme.colors.error.to_color()),
+            ),
         ]),
     ];
 
-    let color_preview = Paragraph::new(color_lines)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!("Color Preview: {}", current_theme.name))
-                .border_style(theme.styles.focused.to_style()),
-        );
+    let color_preview = Paragraph::new(color_lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(format!("Color Preview: {}", current_theme.name))
+            .border_style(theme.styles.focused.to_style()),
+    );
 
     // Split the middle section
     let middle_chunks = Layout::default()

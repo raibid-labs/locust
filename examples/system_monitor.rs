@@ -29,7 +29,6 @@
 /// └─────────────────────────────────────────────────┘
 /// Press 'f' for hints | Ctrl+P for commands | Ctrl+K to kill
 /// ```
-
 mod common;
 
 use chrono::Local;
@@ -38,17 +37,14 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{
-    HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin,
-};
+use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
-        Axis, Block, Borders, Chart, Dataset, GraphType, List, ListItem, ListState, Paragraph,
-        Wrap,
+        Axis, Block, Borders, Chart, Dataset, GraphType, List, ListItem, ListState, Paragraph, Wrap,
     },
     Frame, Terminal,
 };
@@ -222,14 +218,14 @@ impl SystemMonitor {
             cpu_history,
             mem_history,
             disk_io: DiskStats {
-                read_bytes_sec: 1024 * 1024 * 10,  // 10 MB/s
-                write_bytes_sec: 1024 * 1024 * 5,  // 5 MB/s
+                read_bytes_sec: 1024 * 1024 * 10, // 10 MB/s
+                write_bytes_sec: 1024 * 1024 * 5, // 5 MB/s
                 read_ops_sec: 100,
                 write_ops_sec: 50,
             },
             network_io: NetworkStats {
-                rx_bytes_sec: 1024 * 1024 * 2,  // 2 MB/s
-                tx_bytes_sec: 1024 * 512,       // 512 KB/s
+                rx_bytes_sec: 1024 * 1024 * 2, // 2 MB/s
+                tx_bytes_sec: 1024 * 512,      // 512 KB/s
                 rx_packets_sec: 1000,
                 tx_packets_sec: 500,
             },
@@ -505,8 +501,8 @@ impl SystemMonitor {
     }
 
     fn update_stats(&mut self) {
-        use rand::Rng;
-        let mut rng = rand::rng();
+        use rand::Rng as _;
+        let mut rng = rand::thread_rng();
 
         self.update_counter += 1;
 
@@ -514,7 +510,7 @@ impl SystemMonitor {
         let cpu_values: Vec<f32> = (0..self.num_cores)
             .map(|i| {
                 let base = 40.0 + (i as f32 * 10.0);
-                let variation = rng.random_range(-10.0..10.0);
+                let variation = rng.gen_range(-10.0..10.0);
                 (base + variation).clamp(0.0, 100.0)
             })
             .collect();
@@ -525,7 +521,7 @@ impl SystemMonitor {
         }
 
         // Update memory history
-        let mem_percent = 50.0 + rng.random_range(-5.0..5.0);
+        let mem_percent = 50.0 + rng.gen_range(-5.0..5.0);
         self.mem_history.push_back(mem_percent.clamp(0.0, 100.0));
         if self.mem_history.len() > 60 {
             self.mem_history.pop_front();
@@ -533,38 +529,48 @@ impl SystemMonitor {
 
         // Update disk I/O
         self.disk_io.read_bytes_sec =
-            (1024 * 1024 * 10) + rng.random_range(-1024 * 1024..1024 * 1024 * 5);
+            (1024 * 1024 * 10) + rng.gen_range(-1024 * 1024..1024 * 1024 * 5);
         self.disk_io.write_bytes_sec =
-            (1024 * 1024 * 5) + rng.random_range(-1024 * 1024..1024 * 1024 * 2);
+            (1024 * 1024 * 5) + rng.gen_range(-1024 * 1024..1024 * 1024 * 2);
 
         // Update network I/O
         self.network_io.rx_bytes_sec =
-            (1024 * 1024 * 2) + rng.random_range(-1024 * 512..1024 * 1024);
-        self.network_io.tx_bytes_sec =
-            (1024 * 512) + rng.random_range(-1024 * 256..1024 * 512);
+            (1024 * 1024 * 2) + rng.gen_range(-1024 * 512..1024 * 1024);
+        self.network_io.tx_bytes_sec = (1024 * 512) + rng.gen_range(-1024 * 256..1024 * 512);
 
         // Randomly update process stats
         for process in &mut self.processes {
-            process.cpu_percent = (process.cpu_percent + rng.random_range(-5.0..5.0)).clamp(0.0, 100.0);
-            let mem_change = rng.random_range(-10_000_000..10_000_000);
+            process.cpu_percent =
+                (process.cpu_percent + rng.gen_range(-5.0..5.0)).clamp(0.0, 100.0);
+            let mem_change = rng.gen_range(-10_000_000..10_000_000);
             process.mem_bytes = (process.mem_bytes as i64 + mem_change).max(10_000_000) as u64;
         }
 
         // Check alerts
-        let avg_cpu: f32 = self.cpu_history.back().map(|v| v.iter().sum::<f32>() / v.len() as f32).unwrap_or(0.0);
+        let avg_cpu: f32 = self
+            .cpu_history
+            .back()
+            .map(|v| v.iter().sum::<f32>() / v.len() as f32)
+            .unwrap_or(0.0);
         for alert in &mut self.alerts {
             match alert.alert_type {
                 AlertType::CpuHigh => {
                     alert.current_value = avg_cpu;
                     if avg_cpu > alert.threshold {
-                        alert.message = format!("CPU usage {:.1}% exceeds threshold {:.1}%", avg_cpu, alert.threshold);
+                        alert.message = format!(
+                            "CPU usage {:.1}% exceeds threshold {:.1}%",
+                            avg_cpu, alert.threshold
+                        );
                     }
                 }
                 AlertType::MemoryHigh => {
                     let mem_percent = self.mem_history.back().copied().unwrap_or(0.0);
                     alert.current_value = mem_percent;
                     if mem_percent > alert.threshold {
-                        alert.message = format!("Memory usage {:.1}% exceeds threshold {:.1}%", mem_percent, alert.threshold);
+                        alert.message = format!(
+                            "Memory usage {:.1}% exceeds threshold {:.1}%",
+                            mem_percent, alert.threshold
+                        );
                     }
                 }
                 _ => {}
@@ -659,24 +665,22 @@ impl SystemMonitor {
             .collect();
 
         let chart = Chart::new(datasets)
-            .x_axis(
-                Axis::default()
-                    .bounds([0.0, 60.0])
-                    .labels(vec!["0s".into(), "30s".into(), "60s".into()]),
-            )
-            .y_axis(
-                Axis::default()
-                    .bounds([0.0, 100.0])
-                    .labels(vec!["0%".into(), "50%".into(), "100%".into()]),
-            );
+            .x_axis(Axis::default().bounds([0.0, 60.0]).labels(vec![
+                "0s".into(),
+                "30s".into(),
+                "60s".into(),
+            ]))
+            .y_axis(Axis::default().bounds([0.0, 100.0]).labels(vec![
+                "0%".into(),
+                "50%".into(),
+                "100%".into(),
+            ]));
 
         f.render_widget(chart, inner);
     }
 
     fn draw_memory_info(&self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(" Memory ");
+        let block = Block::default().borders(Borders::ALL).title(" Memory ");
 
         let inner = block.inner(area);
         f.render_widget(block, area);
@@ -686,18 +690,17 @@ impl SystemMonitor {
 
         let bar_width = 20;
         let filled = ((mem_percent / 100.0) * bar_width as f32) as usize;
-        let bar = format!(
-            "[{}{}]",
-            "▇".repeat(filled),
-            " ".repeat(bar_width - filled)
-        );
+        let bar = format!("[{}{}]", "▇".repeat(filled), " ".repeat(bar_width - filled));
 
         let lines = vec![
             Line::from(""),
             Line::from(vec![
                 Span::raw("Total:  "),
                 Span::styled(
-                    format!("{:.1} GB", self.total_memory as f64 / 1024.0 / 1024.0 / 1024.0),
+                    format!(
+                        "{:.1} GB",
+                        self.total_memory as f64 / 1024.0 / 1024.0 / 1024.0
+                    ),
                     Style::default().fg(Color::White),
                 ),
             ]),
@@ -720,9 +723,7 @@ impl SystemMonitor {
     }
 
     fn draw_disk_io(&self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(" Disk I/O ");
+        let block = Block::default().borders(Borders::ALL).title(" Disk I/O ");
 
         let inner = block.inner(area);
         f.render_widget(block, area);
@@ -732,19 +733,28 @@ impl SystemMonitor {
             Line::from(vec![
                 Span::raw("Read:  "),
                 Span::styled(
-                    format!("{:.1} MB/s", self.disk_io.read_bytes_sec as f64 / 1024.0 / 1024.0),
+                    format!(
+                        "{:.1} MB/s",
+                        self.disk_io.read_bytes_sec as f64 / 1024.0 / 1024.0
+                    ),
                     Style::default().fg(Color::Green),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("Write: "),
                 Span::styled(
-                    format!("{:.1} MB/s", self.disk_io.write_bytes_sec as f64 / 1024.0 / 1024.0),
+                    format!(
+                        "{:.1} MB/s",
+                        self.disk_io.write_bytes_sec as f64 / 1024.0 / 1024.0
+                    ),
                     Style::default().fg(Color::Red),
                 ),
             ]),
             Line::from(""),
-            Line::from(format!("Ops/s: {} read, {} write", self.disk_io.read_ops_sec, self.disk_io.write_ops_sec)),
+            Line::from(format!(
+                "Ops/s: {} read, {} write",
+                self.disk_io.read_ops_sec, self.disk_io.write_ops_sec
+            )),
         ];
 
         let paragraph = Paragraph::new(lines);
@@ -764,7 +774,10 @@ impl SystemMonitor {
             Line::from(vec![
                 Span::raw("RX:    "),
                 Span::styled(
-                    format!("{:.1} MB/s", self.network_io.rx_bytes_sec as f64 / 1024.0 / 1024.0),
+                    format!(
+                        "{:.1} MB/s",
+                        self.network_io.rx_bytes_sec as f64 / 1024.0 / 1024.0
+                    ),
                     Style::default().fg(Color::Green),
                 ),
             ]),
@@ -776,7 +789,10 @@ impl SystemMonitor {
                 ),
             ]),
             Line::from(""),
-            Line::from(format!("Packets: {} RX, {} TX", self.network_io.rx_packets_sec, self.network_io.tx_packets_sec)),
+            Line::from(format!(
+                "Packets: {} RX, {} TX",
+                self.network_io.rx_packets_sec, self.network_io.tx_packets_sec
+            )),
         ];
 
         let paragraph = Paragraph::new(lines);
@@ -801,7 +817,10 @@ impl SystemMonitor {
                         format!("[{}] ", alert.timestamp.format("%H:%M:%S")),
                         Style::default().fg(Color::DarkGray),
                     ),
-                    Span::styled(&alert.message, Style::default().fg(alert.alert_type.color())),
+                    Span::styled(
+                        &alert.message,
+                        Style::default().fg(alert.alert_type.color()),
+                    ),
                 ]);
                 ListItem::new(line)
             })
@@ -812,16 +831,22 @@ impl SystemMonitor {
     }
 
     fn draw_processes(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(format!(
-                " Processes ({} total) - Sort by: {} ",
-                self.processes.len(),
-                self.sort_by.as_str()
-            ));
+        let block = Block::default().borders(Borders::ALL).title(format!(
+            " Processes ({} total) - Sort by: {} ",
+            self.processes.len(),
+            self.sort_by.as_str()
+        ));
 
-        let running = self.processes.iter().filter(|p| p.status == ProcessStatus::Running).count();
-        let sleeping = self.processes.iter().filter(|p| p.status == ProcessStatus::Sleeping).count();
+        let running = self
+            .processes
+            .iter()
+            .filter(|p| p.status == ProcessStatus::Running)
+            .count();
+        let sleeping = self
+            .processes
+            .iter()
+            .filter(|p| p.status == ProcessStatus::Sleeping)
+            .count();
 
         let header = format!("Running: {} | Sleeping: {} | ", running, sleeping);
 

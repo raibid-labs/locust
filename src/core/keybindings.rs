@@ -31,10 +31,7 @@ fn is_empty_modifiers(modifiers: &u8) -> bool {
 
 impl KeyBinding {
     pub fn new(key: KeyCodeDef) -> Self {
-        Self {
-            key,
-            modifiers: 0,
-        }
+        Self { key, modifiers: 0 }
     }
 
     pub fn with_modifiers(key: KeyCodeDef, modifiers: KeyModifiers) -> Self {
@@ -145,14 +142,12 @@ impl Default for KeyMap {
         };
 
         // Global bindings
-        keymap.global.insert(
-            "quit".to_string(),
-            KeyBinding::new(KeyCodeDef::Char('q')),
-        );
-        keymap.global.insert(
-            "help".to_string(),
-            KeyBinding::new(KeyCodeDef::F(1)),
-        );
+        keymap
+            .global
+            .insert("quit".to_string(), KeyBinding::new(KeyCodeDef::Char('q')));
+        keymap
+            .global
+            .insert("help".to_string(), KeyBinding::new(KeyCodeDef::F(1)));
 
         // Nav plugin bindings
         let mut nav_bindings = HashMap::new();
@@ -176,19 +171,20 @@ impl Default for KeyMap {
             "cancel".to_string(),
             KeyBinding::new(KeyCodeDef::Named("esc".to_string())),
         );
-        keymap.plugins.insert("omnibar".to_string(), omnibar_bindings);
+        keymap
+            .plugins
+            .insert("omnibar".to_string(), omnibar_bindings);
 
         // Tooltip plugin bindings
         let mut tooltip_bindings = HashMap::new();
-        tooltip_bindings.insert(
-            "show".to_string(),
-            KeyBinding::new(KeyCodeDef::Char('h')),
-        );
+        tooltip_bindings.insert("show".to_string(), KeyBinding::new(KeyCodeDef::Char('h')));
         tooltip_bindings.insert(
             "hide".to_string(),
             KeyBinding::new(KeyCodeDef::Named("esc".to_string())),
         );
-        keymap.plugins.insert("tooltip".to_string(), tooltip_bindings);
+        keymap
+            .plugins
+            .insert("tooltip".to_string(), tooltip_bindings);
 
         // Highlight plugin bindings
         let mut highlight_bindings = HashMap::new();
@@ -204,7 +200,9 @@ impl Default for KeyMap {
             "skip_tour".to_string(),
             KeyBinding::new(KeyCodeDef::Char('s')),
         );
-        keymap.plugins.insert("highlight".to_string(), highlight_bindings);
+        keymap
+            .plugins
+            .insert("highlight".to_string(), highlight_bindings);
 
         keymap
     }
@@ -213,13 +211,12 @@ impl Default for KeyMap {
 impl KeyMap {
     pub fn from_file(path: &Path) -> Result<Self, KeyMapError> {
         let content = fs::read_to_string(path)?;
-        toml::from_str(&content)
-            .map_err(|e| KeyMapError::ParseError(e.to_string()))
+        toml::from_str(&content).map_err(|e| KeyMapError::ParseError(e.to_string()))
     }
 
     pub fn to_file(&self, path: &Path) -> Result<(), KeyMapError> {
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| KeyMapError::ParseError(e.to_string()))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| KeyMapError::ParseError(e.to_string()))?;
         fs::write(path, content)?;
         Ok(())
     }
@@ -366,7 +363,9 @@ mod tests {
         assert!(!conflicts.is_empty());
         // The 'q' key now has conflicts between 'quit' and 'custom'
         // There may also be ESC conflicts from multiple plugins
-        let q_conflict = conflicts.iter().find(|c| c.binding.key == KeyCodeDef::Char('q'));
+        let q_conflict = conflicts
+            .iter()
+            .find(|c| c.binding.key == KeyCodeDef::Char('q'));
         assert!(q_conflict.is_some());
         assert!(q_conflict.unwrap().actions.contains(&"quit".to_string()));
         assert!(q_conflict.unwrap().actions.contains(&"custom".to_string()));
@@ -378,9 +377,9 @@ mod tests {
         let conflicts = detect_conflicts(&keymap);
         // Default keymap has ESC conflicts across multiple plugins
         // (nav.cancel, omnibar.cancel, tooltip.hide all use ESC)
-        let esc_conflict = conflicts.iter().find(|c|
-            c.binding.key == KeyCodeDef::Named("esc".to_string())
-        );
+        let esc_conflict = conflicts
+            .iter()
+            .find(|c| c.binding.key == KeyCodeDef::Named("esc".to_string()));
         assert!(esc_conflict.is_some());
     }
 

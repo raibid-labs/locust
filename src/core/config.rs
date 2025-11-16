@@ -25,7 +25,7 @@
 //! # Ok::<(), locust::core::config::ConfigError>(())
 //! ```
 
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -296,10 +296,7 @@ impl LocustConfig {
     /// - File cannot be written
     /// - Serialization fails
     pub fn save(&self) -> Result<(), ConfigError> {
-        let path = self
-            .config_path
-            .as_ref()
-            .ok_or(ConfigError::NoConfigPath)?;
+        let path = self.config_path.as_ref().ok_or(ConfigError::NoConfigPath)?;
 
         self.save_to(path)
     }
@@ -311,10 +308,12 @@ impl LocustConfig {
     /// Returns `ConfigError` if file cannot be written or serialization fails.
     pub fn save_to(&self, path: &Path) -> Result<(), ConfigError> {
         let content = match path.extension().and_then(|s| s.to_str()) {
-            Some("toml") => toml::to_string_pretty(self).map_err(|e| ConfigError::SerializeToml {
-                path: path.to_path_buf(),
-                source: e,
-            })?,
+            Some("toml") => {
+                toml::to_string_pretty(self).map_err(|e| ConfigError::SerializeToml {
+                    path: path.to_path_buf(),
+                    source: e,
+                })?
+            }
             Some("json") => {
                 serde_json::to_string_pretty(self).map_err(|e| ConfigError::SerializeJson {
                     path: path.to_path_buf(),
@@ -341,10 +340,7 @@ impl LocustConfig {
     ///
     /// Returns `ConfigError` if no path is set or file cannot be loaded.
     pub fn reload(&mut self) -> Result<(), ConfigError> {
-        let path = self
-            .config_path
-            .clone()
-            .ok_or(ConfigError::NoConfigPath)?;
+        let path = self.config_path.clone().ok_or(ConfigError::NoConfigPath)?;
         *self = Self::from_file(&path)?;
         Ok(())
     }
@@ -371,11 +367,10 @@ impl LocustConfig {
         plugin_id: &str,
         config: T,
     ) -> Result<(), ConfigError> {
-        let value =
-            serde_json::to_value(config).map_err(|e| ConfigError::InvalidPluginConfig {
-                plugin_id: plugin_id.to_string(),
-                source: e,
-            })?;
+        let value = serde_json::to_value(config).map_err(|e| ConfigError::InvalidPluginConfig {
+            plugin_id: plugin_id.to_string(),
+            source: e,
+        })?;
 
         self.plugins
             .insert(plugin_id.to_string(), PluginConfig::Custom(value));
@@ -397,8 +392,7 @@ impl LocustConfig {
 
         match plugin_config {
             PluginConfig::Custom(value) => serde_json::from_value(value.clone()).ok(),
-            PluginConfig::Nav(cfg) => serde_json::from_value(serde_json::to_value(cfg).ok()?)
-                .ok(),
+            PluginConfig::Nav(cfg) => serde_json::from_value(serde_json::to_value(cfg).ok()?).ok(),
             PluginConfig::Omnibar(cfg) => {
                 serde_json::from_value(serde_json::to_value(cfg).ok()?).ok()
             }
@@ -468,9 +462,7 @@ pub struct ConfigWatcher {
 impl ConfigWatcher {
     /// Creates a new config watcher for the given path.
     pub fn new(path: PathBuf) -> Self {
-        let last_modified = fs::metadata(&path)
-            .and_then(|m| m.modified())
-            .ok();
+        let last_modified = fs::metadata(&path).and_then(|m| m.modified()).ok();
 
         Self {
             path,
@@ -568,10 +560,20 @@ impl std::fmt::Display for ConfigError {
                 write!(f, "JSON parse error in {}: {}", path.display(), source)
             }
             ConfigError::SerializeToml { path, source } => {
-                write!(f, "TOML serialization error for {}: {}", path.display(), source)
+                write!(
+                    f,
+                    "TOML serialization error for {}: {}",
+                    path.display(),
+                    source
+                )
             }
             ConfigError::SerializeJson { path, source } => {
-                write!(f, "JSON serialization error for {}: {}", path.display(), source)
+                write!(
+                    f,
+                    "JSON serialization error for {}: {}",
+                    path.display(),
+                    source
+                )
             }
             ConfigError::NoConfigPath => write!(f, "No configuration path set"),
             ConfigError::InvalidPluginConfig { plugin_id, source } => {

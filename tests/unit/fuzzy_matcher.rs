@@ -234,12 +234,7 @@ fn test_find_matches_empty_query() {
 
 #[test]
 fn test_match_struct_creation() {
-    let match_result = Match::new(
-        0,
-        42.5,
-        vec![0, 1, 2],
-        "test".to_string(),
-    );
+    let match_result = Match::new(0, 42.5, vec![0, 1, 2], "test".to_string());
 
     assert_eq!(match_result.index, 0);
     assert_eq!(match_result.score, 42.5);
@@ -264,9 +259,7 @@ fn test_performance_many_candidates() {
     let matcher = FuzzyMatcher::new();
 
     // Generate 1000 candidates
-    let candidates: Vec<String> = (0..1000)
-        .map(|i| format!("candidate_{:04}", i))
-        .collect();
+    let candidates: Vec<String> = (0..1000).map(|i| format!("candidate_{:04}", i)).collect();
     let candidate_refs: Vec<&str> = candidates.iter().map(|s| s.as_str()).collect();
 
     let start = std::time::Instant::now();
