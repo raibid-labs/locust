@@ -3,7 +3,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::core::targets::TargetRegistry;
+use locust::prelude::*;
 use locust::ratatui_ext::adapters::{
     NavigableList, NavigableTable, NavigableTabs, NavigableTree, TableNavMode, TreeNode,
 };
@@ -373,29 +373,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app
-    let mut app = App::new();
+    let app = App::new();
+    let mut locust = Locust::new(LocustConfig::default());
+    locust.register_plugin(NavPlugin::new());
 
-    // Main loop
-    loop {
-        // Create fresh registry for each frame
-        let mut registry = TargetRegistry::new();
-
-        // Draw UI
-        terminal.draw(|f| {
-            app.draw(f, &mut registry);
-        })?;
-
-        // Handle input
-        if event::poll(std::time::Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                app.on_key(key.code);
-            }
-        }
-
-        if app.should_quit {
-            break;
-        }
-    }
+    // Run the app
+    let res = run_app(&mut terminal, app, &mut locust);
 
     // Restore terminal
     disable_raw_mode()?;
@@ -406,5 +389,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     terminal.show_cursor()?;
 
+    if let Err(err) = res {
+        println!("Error: {:?}", err)
+    }
+
+    Ok(())
+}
+
+fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    mut app: App,
+    locust: &mut Locust<B>,
+) -> io::Result<()> {
+    'outer: loop {
+        locust.begin_frame();
+        terminal.draw(|f| {
+            app.draw(f, &mut locust.ctx.targets);
+            locust.render_overlay(f);
+        })?;
+
+        if event::poll(std::time::Duration::from_millis(250))? {
+            let ev = event::read()?;
+            let outcome = locust.on_event(&ev);
+            if !outcome.consumed {
+                if let Event::Key(key) = ev {
+                    if key.code == KeyCode::Char('q') {
+                        break 'outer;
+                    }
+                    app.on_key(key.code);
+                }
+            }
+        }
+    }
     Ok(())
 }
