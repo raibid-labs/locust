@@ -37,9 +37,9 @@ use crate::core::plugin::LocustPlugin;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use hints::{HintGenerator, HintMatcher};
 use ratatui::backend::Backend;
-use ratatui::style::{Color, Modifier, Style};
 use ratatui::Frame;
 use render::HintRenderer;
+use log::info;
 
 /// Current navigation mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,9 +88,6 @@ pub struct NavPlugin {
 
     /// Hint renderer
     renderer: HintRenderer,
-
-    /// Banner style for hint mode status
-    banner_style: Style,
 }
 
 impl Default for NavPlugin {
@@ -110,10 +107,6 @@ impl NavPlugin {
         let generator = HintGenerator::new(config.hint_charset.clone());
         let matcher = HintMatcher::new();
         let renderer = HintRenderer::new();
-        let banner_style = Style::default()
-            .bg(Color::Blue)
-            .fg(Color::White)
-            .add_modifier(Modifier::BOLD);
 
         Self {
             mode: NavMode::Normal,
@@ -121,7 +114,6 @@ impl NavPlugin {
             generator,
             matcher,
             renderer,
-            banner_style,
         }
     }
 
@@ -192,7 +184,7 @@ impl NavPlugin {
         if let Some(target) = ctx.targets.by_id(target_id) {
             // Log the activation for debugging
             // In a real application, this would trigger the target's action
-            eprintln!(
+            info!(
                 "Locust: Activated target {} ({:?})",
                 target_id,
                 target.label.as_deref().unwrap_or("unlabeled")
@@ -213,7 +205,7 @@ impl NavPlugin {
 
 impl<B> LocustPlugin<B> for NavPlugin
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     fn id(&self) -> &'static str {
         "locust.nav"
@@ -274,7 +266,7 @@ where
         }
 
         // Render hint banner at top
-        render::render_hint_banner(frame, &self.matcher, self.banner_style);
+        render::render_hint_banner(frame, &self.matcher, self.config.banner_style);
 
         // Render hints on targets
         self.renderer

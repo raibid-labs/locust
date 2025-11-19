@@ -51,6 +51,12 @@ use ratatui::{
 };
 use std::io::{self, Stdout};
 use std::time::{Duration, SystemTime};
+use std::fs::File;
+use std::path::PathBuf;
+
+use log::{debug, LevelFilter};
+use simplelog::{CombinedLogger, Config, WriteLogger};
+use locust::ratatui_ext::LogTailer;
 
 /// Log level enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,16 +160,6 @@ struct LogViewer {
     scroll_pos: usize,
     /// Current filter mode
     filter_mode: FilterMode,
-    /// Input mode
-    input_mode: InputMode,
-    /// Search query
-    search_query: String,
-    /// Search results (line indices)
-    search_results: Vec<usize>,
-    /// Current search result index
-    search_result_idx: usize,
-    /// Input buffer for goto line
-    goto_input: String,
     /// Tail mode enabled
     tail_mode: bool,
     /// Bookmarked line numbers
@@ -189,11 +185,6 @@ impl LogViewer {
             filtered_indices,
             scroll_pos: 0,
             filter_mode: FilterMode::All,
-            input_mode: InputMode::Normal,
-            search_query: String::new(),
-            search_results: Vec::new(),
-            search_result_idx: 0,
-            goto_input: String::new(),
             tail_mode: false,
             bookmarks: Vec::new(),
             stats,
@@ -286,71 +277,6 @@ impl LogViewer {
         }
     }
 
-    /// Perform search in logs
-    fn perform_search(&mut self) {
-        self.search_results.clear();
-        self.search_result_idx = 0;
-
-        if self.search_query.is_empty() {
-            return;
-        }
-
-        let query = self.search_query.to_lowercase();
-        self.search_results = self
-            .filtered_indices
-            .iter()
-            .filter(|&&idx| {
-                let log = &self.logs[idx];
-                log.message.to_lowercase().contains(&query)
-                    || log.source.to_lowercase().contains(&query)
-            })
-            .copied()
-            .collect();
-    }
-
-    /// Jump to next search result
-    fn next_search_result(&mut self) {
-        if self.search_results.is_empty() {
-            return;
-        }
-
-        self.search_result_idx = (self.search_result_idx + 1) % self.search_results.len();
-        let line_idx = self.search_results[self.search_result_idx];
-
-        // Find position in filtered list
-        if let Some(pos) = self
-            .filtered_indices
-            .iter()
-            .position(|&idx| idx == line_idx)
-        {
-            self.scroll_pos = pos;
-        }
-    }
-
-    /// Jump to previous search result
-    fn prev_search_result(&mut self) {
-        if self.search_results.is_empty() {
-            return;
-        }
-
-        self.search_result_idx = if self.search_result_idx == 0 {
-            self.search_results.len() - 1
-        } else {
-            self.search_result_idx - 1
-        };
-
-        let line_idx = self.search_results[self.search_result_idx];
-
-        // Find position in filtered list
-        if let Some(pos) = self
-            .filtered_indices
-            .iter()
-            .position(|&idx| idx == line_idx)
-        {
-            self.scroll_pos = pos;
-        }
-    }
-
     /// Toggle bookmark on current line
     fn toggle_bookmark(&mut self) {
         if let Some(&idx) = self.filtered_indices.get(self.scroll_pos) {
@@ -398,32 +324,13 @@ impl LogViewer {
 
     /// Handle keyboard input
     fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        match self.input_mode {
-            InputMode::Normal => self.handle_normal_key(key, modifiers),
-            InputMode::Search => self.handle_search_key(key),
-            InputMode::GotoLine => self.handle_goto_key(key),
-        }
+        self.handle_normal_key(key, modifiers)
     }
 
     fn handle_normal_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
         match key {
             KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char('/') => {
-                self.input_mode = InputMode::Search;
-                self.search_query.clear();
-            }
-            KeyCode::Char('g') => {
-                if modifiers.contains(KeyModifiers::SHIFT) {
-                    // Shift+G = go to end
-                    self.scroll_pos = self.filtered_indices.len().saturating_sub(1);
-                } else {
-                    self.input_mode = InputMode::GotoLine;
-                    self.goto_input.clear();
-                }
-            }
             KeyCode::Char('m') => self.toggle_bookmark(),
-            KeyCode::Char('n') => self.next_search_result(),
-            KeyCode::Char('N') => self.prev_search_result(),
             KeyCode::Char('F') => self.tail_mode = !self.tail_mode,
             KeyCode::Char(c @ '0'..='4') => {
                 let num = c as u8 - b'0';
@@ -461,93 +368,34 @@ impl LogViewer {
         }
     }
 
-    fn handle_search_key(&mut self, key: KeyCode) {
-        match key {
-            KeyCode::Esc => {
-                self.input_mode = InputMode::Normal;
-                self.search_query.clear();
-                self.search_results.clear();
-            }
-            KeyCode::Enter => {
-                self.input_mode = InputMode::Normal;
-                self.perform_search();
-                if !self.search_results.is_empty() {
-                    self.next_search_result();
-                }
-            }
-            KeyCode::Char(c) => {
-                self.search_query.push(c);
-            }
-            KeyCode::Backspace => {
-                self.search_query.pop();
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_goto_key(&mut self, key: KeyCode) {
-        match key {
-            KeyCode::Esc => {
-                self.input_mode = InputMode::Normal;
-                self.goto_input.clear();
-            }
-            KeyCode::Enter => {
-                self.input_mode = InputMode::Normal;
-                if let Ok(line_num) = self.goto_input.parse::<usize>() {
-                    if line_num > 0 && line_num <= self.logs.len() {
-                        // Find position in filtered list
-                        if let Some(pos) = self
-                            .filtered_indices
-                            .iter()
-                            .position(|&idx| self.logs[idx].line_number == line_num)
-                        {
-                            self.scroll_pos = pos;
-                        }
-                    }
-                }
-                self.goto_input.clear();
-            }
-            KeyCode::Char(c @ '0'..='9') => {
-                self.goto_input.push(c);
-            }
-            KeyCode::Backspace => {
-                self.goto_input.pop();
-            }
-            _ => {}
-        }
-    }
-
     /// Render the log viewer UI
-    fn draw(&self, f: &mut Frame, locust: &mut Locust<CrosstermBackend<Stdout>>) {
+    fn draw(&self, f: &mut Frame, locust: &mut Locust<CrosstermBackend<Stdout>>, log_tailer: &mut LogTailer, target_builder: &mut TargetBuilder) {
         let size = f.area();
 
-        // Main layout: filter bar + content + status bar
+        // Main layout: filter bar + content + status bar + log tailer
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),
-                Constraint::Min(0),
-                Constraint::Length(3),
+                Constraint::Length(3),  // Filter bar
+                Constraint::Min(0),     // Content
+                Constraint::Length(3),  // Status bar
+                Constraint::Length(10), // Log tailer
             ])
             .split(size);
 
         // Render components
-        self.draw_filter_bar(f, chunks[0]);
-        self.draw_logs(f, chunks[1]);
-        self.draw_status_bar(f, chunks[2]);
+        self.draw_filter_bar(f, chunks[0], locust, target_builder);
+        self.draw_logs(f, chunks[1], locust, target_builder);
+        self.draw_status_bar(f, chunks[2], locust, target_builder);
 
-        // Render input dialogs
-        match self.input_mode {
-            InputMode::Search => self.draw_search_dialog(f, size),
-            InputMode::GotoLine => self.draw_goto_dialog(f, size),
-            InputMode::Normal => {}
-        }
+        // Render Log Tailer
+        f.render_widget(log_tailer, chunks[3]);
 
         // Let Locust render overlays
         locust.render_overlay(f);
     }
 
-    fn draw_filter_bar(&self, f: &mut Frame, area: Rect) {
+    fn draw_filter_bar(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let text = vec![Line::from(vec![
             Span::styled(" Filter: ", Style::default().add_modifier(Modifier::BOLD)),
             Span::styled(
@@ -555,15 +403,6 @@ impl LogViewer {
                 Style::default()
                     .fg(Color::Yellow)
                     .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" | "),
-            Span::styled(
-                if !self.search_query.is_empty() {
-                    format!("Search: {} ", self.search_query)
-                } else {
-                    "No search".to_string()
-                },
-                Style::default().fg(Color::Cyan),
             ),
             Span::raw(" | "),
             Span::styled(
@@ -587,10 +426,21 @@ impl LogViewer {
                 .title(" Log Viewer "),
         );
 
-        f.render_widget(paragraph, area);
+        // Register NavTargets for filter options
+        let filter_area = Rect::new(area.x + 10, area.y + 1, 10, 1); // Approximate position
+        locust.ctx.targets.register(
+            target_builder.custom(filter_area, "Filter Mode", TargetAction::Activate, TargetPriority::Normal)
+        );
+
+        // Register NavTarget for tail mode toggle
+        let tail_area = Rect::new(area.width - 10, area.y + 1, 8, 1); // Approximate position
+        locust.ctx.targets.register(
+            target_builder.custom(tail_area, "Tail Mode Toggle", TargetAction::Activate, TargetPriority::Normal)
+        );
+
     }
 
-    fn draw_logs(&self, f: &mut Frame, area: Rect) {
+    fn draw_logs(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let visible_lines = area.height.saturating_sub(2) as usize;
         let start = self.scroll_pos;
         let end = (start + visible_lines).min(self.filtered_indices.len());
@@ -649,9 +499,25 @@ impl LogViewer {
         );
 
         f.render_widget(list, area);
+
+        // Register NavTargets for log entries
+        let list_items_area = Block::default().borders(Borders::ALL).inner(area);
+        let row_height = 1;
+        for (i, &idx) in self.filtered_indices.iter().skip(start).take(visible_lines).enumerate() {
+            let log = &self.logs[idx];
+            let item_rect = Rect::new(
+                list_items_area.x,
+                list_items_area.y + i as u16 * row_height,
+                list_items_area.width,
+                row_height,
+            );
+            locust.ctx.targets.register(
+                target_builder.list_item(item_rect, format!("Log Entry: {}", log.message))
+            );
+        }
     }
 
-    fn draw_status_bar(&self, f: &mut Frame, area: Rect) {
+    fn draw_status_bar(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let text = vec![Line::from(vec![
             Span::styled(
                 format!(" Total: {} ", self.stats.total),
@@ -689,62 +555,49 @@ impl LogViewer {
         let paragraph = Paragraph::new(text).block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        );
-
         f.render_widget(paragraph, area);
-    }
 
-    fn draw_search_dialog(&self, f: &mut Frame, area: Rect) {
-        let dialog_area = Rect {
-            x: area.width / 4,
-            y: area.height / 2 - 2,
-            width: area.width / 2,
-            height: 3,
-        };
+        // Register NavTargets for statistics
+        let base_x = area.x + 1;
+        let base_y = area.y + 1;
+        let item_height = 1;
 
-        let text = vec![Line::from(vec![
-            Span::styled("Search: ", Style::default().fg(Color::Yellow)),
-            Span::raw(&self.search_query),
-            Span::styled("█", Style::default().fg(Color::White)),
-        ])];
-
-        let paragraph = Paragraph::new(text).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Yellow))
-                .title(" Search Logs "),
+        let total_area = Rect::new(base_x, base_y, 10, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(total_area, format!("Total Logs: {}", self.stats.total), TargetAction::Activate, TargetPriority::Low)
         );
 
-        f.render_widget(paragraph, dialog_area);
-    }
-
-    fn draw_goto_dialog(&self, f: &mut Frame, area: Rect) {
-        let dialog_area = Rect {
-            x: area.width / 4,
-            y: area.height / 2 - 2,
-            width: area.width / 2,
-            height: 3,
-        };
-
-        let text = vec![Line::from(vec![
-            Span::styled("Go to line: ", Style::default().fg(Color::Yellow)),
-            Span::raw(&self.goto_input),
-            Span::styled("█", Style::default().fg(Color::White)),
-        ])];
-
-        let paragraph = Paragraph::new(text).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Yellow))
-                .title(" Jump to Line "),
+        let error_area = Rect::new(base_x + 12, base_y, 10, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(error_area, format!("Error Logs: {}", self.stats.errors), TargetAction::Activate, TargetPriority::Low)
         );
 
-        f.render_widget(paragraph, dialog_area);
+        let warn_area = Rect::new(base_x + 24, base_y, 10, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(warn_area, format!("Warning Logs: {}", self.stats.warnings), TargetAction::Activate, TargetPriority::Low)
+        );
+
+        let info_area = Rect::new(base_x + 36, base_y, 10, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(info_area, format!("Info Logs: {}", self.stats.info), TargetAction::Activate, TargetPriority::Low)
+        );
+
+        let debug_area = Rect::new(base_x + 48, base_y, 10, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(debug_area, format!("Debug Logs: {}", self.stats.debug), TargetAction::Activate, TargetPriority::Low)
+        );
+
+        let bookmark_area = Rect::new(base_x + 60, base_y, 15, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(bookmark_area, format!("Bookmarked Logs: {}", self.stats.bookmarked), TargetAction::Activate, TargetPriority::Low)
+        );
+
+        let filtered_area = Rect::new(base_x + 77, base_y, 15, item_height);
+        locust.ctx.targets.register(
+            target_builder.custom(filtered_area, format!("Filtered Logs: {}", self.filtered_indices.len()), TargetAction::Activate, TargetPriority::Low)
+        );
     }
-}
+} // This closes the impl LogViewer block
 
 /// Format Unix timestamp to readable datetime
 fn format_timestamp(secs: u64) -> String {
@@ -758,6 +611,19 @@ fn format_timestamp(secs: u64) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logger
+    let log_file_path = PathBuf::from("locust-log-viewer.log");
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Debug,
+                Config::default(),
+                File::create(&log_file_path).unwrap(),
+            ),
+        ]
+    ).unwrap();
+    debug!("Logger initialized for Log Viewer.");
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -768,19 +634,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Locust instance with navigation plugin
     let mut locust = Locust::new(LocustConfig::default());
     locust.register_plugin(NavPlugin::new());
+    locust.register_plugin(OmnibarPlugin::with_config(
+        OmnibarConfig::new().with_activation_key('O'),
+    ));
 
     // Create log viewer
     let mut viewer = LogViewer::new();
+    let mut log_tailer = LogTailer::new(log_file_path, 10); // Display last 10 log lines
+    let mut target_builder = TargetBuilder::new();
     let mut last_tick = SystemTime::now();
     let tick_rate = Duration::from_millis(1000); // 1 second for tail mode
 
     // Main event loop
     loop {
         locust.begin_frame();
+        log_tailer.read_tail()?; // Update log tail at the beginning of each frame
 
         // Draw UI
         terminal.draw(|f| {
-            viewer.draw(f, &mut locust);
+            viewer.draw(f, &mut locust, &mut log_tailer, &mut target_builder);
         })?;
 
         // Handle events

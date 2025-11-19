@@ -31,7 +31,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
+use locust::prelude::*;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -43,9 +43,14 @@ use ratatui::{
 use std::{
     collections::VecDeque,
     io::{self, Stdout},
-    path::PathBuf,
+    path::{PathBuf, Path},
     time::{Duration, Instant},
+    fs::File,
 };
+
+use log::{debug, error, info, LevelFilter};
+use simplelog::{CombinedLogger, Config, WriteLogger};
+use locust::ratatui_ext::LogTailer;
 
 use common::mock::{generate_commits, Commit};
 
@@ -69,14 +74,10 @@ struct GitBrowser {
     current_branch: String,
     /// Tags in repository
     tags: Vec<String>,
-    /// Search query
-    search_query: String,
     /// Locust integration
     locust: Locust<CrosstermBackend<Stdout>>,
     /// Current view mode
     view_mode: ViewMode,
-    /// Command history
-    command_history: VecDeque<String>,
     /// Tour active
     tour_active: bool,
     /// Tour step
@@ -293,27 +294,24 @@ impl DiffView {
 }
 
 impl GitBrowser {
-    fn new(terminal: Terminal<CrosstermBackend<Stdout>>) -> io::Result<Self> {
-        let mut locust = Locust::new(terminal);
+    fn new() -> io::Result<Self> {
+        let mut locust = Locust::new(LocustConfig::default());
 
         // Initialize plugins
-        locust.add_plugin(NavPlugin::default());
-        locust.add_plugin(OmnibarPlugin::default());
-        locust.add_plugin(TooltipPlugin::default());
+        locust.register_plugin(NavPlugin::default());
+        locust.register_plugin(OmnibarPlugin::default());
+        locust.register_plugin(TooltipPlugin::default());
 
-        let highlight_config = HighlightConfig {
-            steps: vec![
-                "Welcome to Git Browser! Press 'n' to continue.".to_string(),
-                "Navigate commits with arrow keys and 'f' for hints".to_string(),
-                "View files by pressing Tab to switch to files panel".to_string(),
-                "Press Enter on a file to see the diff".to_string(),
-                "Use Ctrl+P for command palette (checkout, search, etc.)".to_string(),
-                "Press 'b' to switch branches, 't' to view tags".to_string(),
-            ],
-            highlight_color: Color::Yellow,
-            text_color: Color::White,
-        };
-        locust.add_plugin(HighlightPlugin::new(highlight_config));
+        let mut highlight_plugin = HighlightPlugin::new();
+        let tour = Tour::new("git_workflow_tour")
+            .add_step(TourStep::new("Welcome", "Welcome to Git Browser! Press 'n' to continue."))
+            .add_step(TourStep::new("Navigate Commits", "Navigate commits with arrow keys and 'f' for hints"))
+            .add_step(TourStep::new("View Files", "View files by pressing Tab to switch to files panel"))
+            .add_step(TourStep::new("View Diff", "Press Enter on a file to see the diff"))
+            .add_step(TourStep::new("Command Palette", "Use Ctrl+P for command palette (checkout, search, etc.)"))
+            .add_step(TourStep::new("Branches & Tags", "Press 'b' to switch branches. Press 'q' to exit tour."));
+        highlight_plugin.register_tour(tour);
+        locust.register_plugin(highlight_plugin);
 
         // Generate mock commits
         let commits = generate_commits(50);
@@ -343,23 +341,23 @@ impl GitBrowser {
                 "v1.1.0".to_string(),
                 "v2.0.0-beta".to_string(),
             ],
-            search_query: String::new(),
             locust,
             view_mode: ViewMode::Commits,
-            command_history: VecDeque::new(),
             tour_active: false,
             tour_step: 0,
             fps_counter: common::FpsCounter::new(),
         })
     }
 
-    fn run(&mut self) -> io::Result<()> {
+    fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>, log_tailer: &mut LogTailer) -> io::Result<()> {
         let tick_rate = Duration::from_millis(16); // ~60 FPS
         let mut last_tick = Instant::now();
+        let mut target_builder = TargetBuilder::new();
 
         loop {
             self.fps_counter.tick();
-            self.draw()?;
+            log_tailer.read_tail()?; // Update log tail at the beginning of each frame
+            self.draw(terminal, log_tailer, &mut target_builder)?;
 
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
             if event::poll(timeout)? {
@@ -393,13 +391,15 @@ impl GitBrowser {
             }
         }
 
+        // Let Locust handle the event first
+        let event_result = self.locust.on_event(&Event::Key(key));
+        if event_result.consumed {
+            return Ok(false);
+        }
+
         // Global commands
         match (key.modifiers, key.code) {
             (KeyModifiers::CONTROL, KeyCode::Char('c')) => return Ok(true),
-            (KeyModifiers::CONTROL, KeyCode::Char('p')) => {
-                self.locust.omnibar_mut().toggle();
-                return Ok(false);
-            }
             (_, KeyCode::Char('t')) => {
                 self.tour_active = !self.tour_active;
                 if self.tour_active {
@@ -418,11 +418,6 @@ impl GitBrowser {
             _ => {}
         }
 
-        // Command palette mode
-        if self.locust.omnibar().is_active() {
-            return self.handle_omnibar_input(key);
-        }
-
         // View-specific controls
         match self.view_mode {
             ViewMode::Commits => self.handle_commits_input(key),
@@ -430,27 +425,6 @@ impl GitBrowser {
             ViewMode::Diff => self.handle_diff_input(key),
         }
 
-        Ok(false)
-    }
-
-    fn handle_omnibar_input(&mut self, key: KeyEvent) -> io::Result<bool> {
-        match key.code {
-            KeyCode::Esc => {
-                self.locust.omnibar_mut().toggle();
-            }
-            KeyCode::Enter => {
-                let query = self.locust.omnibar().query().to_string();
-                self.execute_command(&query);
-                self.locust.omnibar_mut().toggle();
-            }
-            KeyCode::Char(c) => {
-                self.locust.omnibar_mut().push_char(c);
-            }
-            KeyCode::Backspace => {
-                self.locust.omnibar_mut().pop_char();
-            }
-            _ => {}
-        }
         Ok(false)
     }
 
@@ -535,85 +509,59 @@ impl GitBrowser {
         }
     }
 
-    fn execute_command(&mut self, command: &str) {
-        self.command_history.push_back(command.to_string());
-        if self.command_history.len() > 50 {
-            self.command_history.pop_front();
-        }
+    fn draw(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>, log_tailer: &mut LogTailer, target_builder: &mut TargetBuilder) -> io::Result<()> {
+        terminal.draw(|f| {
+            let size = f.area();
 
-        let parts: Vec<&str> = command.split_whitespace().collect();
-        if parts.is_empty() {
-            return;
-        }
-
-        match parts[0] {
-            "checkout" => {
-                if parts.len() > 1 {
-                    let branch = parts[1];
-                    if self.branches.contains(&branch.to_string()) {
-                        self.current_branch = branch.to_string();
-                    }
-                }
-            }
-            "search" => {
-                if parts.len() > 1 {
-                    self.search_query = parts[1..].join(" ");
-                }
-            }
-            "diff" => {
-                if parts.len() > 1 {
-                    let file = parts[1];
-                    self.diff_view = Some(DiffView::new(file.to_string()));
-                    self.view_mode = ViewMode::Diff;
-                }
-            }
-            "blame" => {
-                // Mock implementation
-            }
-            "log" => {
-                // Mock implementation
-                self.view_mode = ViewMode::Commits;
-            }
-            _ => {}
-        }
-    }
-
-    fn draw(&mut self) -> io::Result<()> {
-        self.locust.terminal_mut().draw(|f| {
-            let area = f.area();
-
-            // Three-column layout
+            // Main layout: three columns + status bar + log tailer
             let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(0), // Main content
+                    Constraint::Length(1), // Status bar
+                    Constraint::Length(10), // Log tailer
+                ])
+                .split(size);
+
+            let main_content_area = chunks[0];
+            let status_bar_area = chunks[1];
+            let log_tailer_area = chunks[2];
+
+            // Three-column layout for main content
+            let main_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
                     Constraint::Percentage(40),
                     Constraint::Percentage(30),
                     Constraint::Percentage(30),
                 ])
-                .split(area);
+                .split(main_content_area);
 
             // Draw commits panel
-            self.draw_commits(f, chunks[0]);
+            self.draw_commits(f, main_chunks[0], target_builder);
 
             // Draw files panel
-            self.draw_files(f, chunks[1]);
+            self.draw_files(f, main_chunks[1], target_builder);
 
             // Draw diff panel
-            self.draw_diff(f, chunks[2]);
+            self.draw_diff(f, main_chunks[2], target_builder);
 
             // Draw status bar
-            self.draw_status_bar(f, area);
+            self.draw_status_bar(f, status_bar_area);
+
+            // Draw Log Tailer
+            f.render_widget(log_tailer, log_tailer_area);
 
             // Draw tour if active
             if self.tour_active {
-                self.draw_tour(f, area);
+                self.draw_tour(f, size);
             }
         })?;
 
         Ok(())
     }
 
-    fn draw_commits(&mut self, f: &mut Frame, area: Rect) {
+    fn draw_commits(&mut self, f: &mut Frame, area: Rect, target_builder: &mut TargetBuilder) {
         let border_style = if self.view_mode == ViewMode::Commits {
             Style::default().fg(Color::Cyan)
         } else {
@@ -641,7 +589,7 @@ impl GitBrowser {
             .collect();
 
         let list = List::new(items)
-            .block(block)
+            .block(block.clone())
             .highlight_style(
                 Style::default()
                     .bg(Color::DarkGray)
@@ -650,9 +598,24 @@ impl GitBrowser {
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, area, &mut self.commit_state);
+
+        // Register NavTargets for commits
+        let list_items_area = block.inner(area);
+        let row_height = 1;
+        for (idx, commit) in self.commits.iter().enumerate() {
+            let item_rect = Rect::new(
+                list_items_area.x,
+                list_items_area.y + idx as u16 * row_height,
+                list_items_area.width,
+                row_height,
+            );
+            self.locust.ctx.targets.register(
+                target_builder.list_item(item_rect, format!("Commit: {}", commit.message))
+            );
+        }
     }
 
-    fn draw_files(&mut self, f: &mut Frame, area: Rect) {
+    fn draw_files(&mut self, f: &mut Frame, area: Rect, target_builder: &mut TargetBuilder) {
         let border_style = if self.view_mode == ViewMode::Files {
             Style::default().fg(Color::Cyan)
         } else {
@@ -677,7 +640,7 @@ impl GitBrowser {
             .collect();
 
         let list = List::new(items)
-            .block(block)
+            .block(block.clone())
             .highlight_style(
                 Style::default()
                     .bg(Color::DarkGray)
@@ -686,9 +649,24 @@ impl GitBrowser {
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, area, &mut self.file_state);
+
+        // Register NavTargets for files
+        let list_items_area = block.inner(area);
+        let row_height = 1;
+        for (idx, (path, _, _)) in files.iter().enumerate() {
+            let item_rect = Rect::new(
+                list_items_area.x,
+                list_items_area.y + idx as u16 * row_height,
+                list_items_area.width,
+                row_height,
+            );
+            self.locust.ctx.targets.register(
+                target_builder.list_item(item_rect, format!("File: {}", path))
+            );
+        }
     }
 
-    fn draw_diff(&self, f: &mut Frame, area: Rect) {
+    fn draw_diff(&mut self, f: &mut Frame, area: Rect, target_builder: &mut TargetBuilder) {
         let border_style = if self.view_mode == ViewMode::Diff {
             Style::default().fg(Color::Cyan)
         } else {
@@ -734,6 +712,11 @@ impl GitBrowser {
                 .wrap(Wrap { trim: false });
 
             f.render_widget(paragraph, area);
+
+        // Register NavTarget for the diff pane
+        self.locust.ctx.targets.register(
+            target_builder.custom(area, "Diff Pane", TargetAction::Activate, TargetPriority::Low)
+        );
         } else {
             let text = Paragraph::new("Select a file to view diff")
                 .block(block)
@@ -796,14 +779,28 @@ impl GitBrowser {
 }
 
 fn main() -> io::Result<()> {
+    // Initialize logger
+    let log_file_path = PathBuf::from("locust-git-browser.log");
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Debug,
+                Config::default(),
+                File::create(&log_file_path).unwrap(),
+            ),
+        ]
+    ).unwrap();
+    debug!("Logger initialized for Git Browser.");
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
 
-    let mut app = GitBrowser::new(terminal)?;
-    let result = app.run();
+    let mut app = GitBrowser::new()?;
+    let mut log_tailer = LogTailer::new(log_file_path, 10); // Display last 10 log lines
+    let result = app.run(&mut terminal, &mut log_tailer);
 
     disable_raw_mode()?;
     execute!(io::stdout(), LeaveAlternateScreen)?;

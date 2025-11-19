@@ -2,6 +2,8 @@
 //!
 //! Handles input buffer, cursor position, mode tracking, and command history.
 
+use std::time::Instant;
+
 /// Current mode of the omnibar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OmnibarMode {
@@ -41,6 +43,9 @@ pub struct OmnibarState {
 
     /// Temporary buffer when navigating history
     temp_buffer: Option<String>,
+
+    /// Temporary message to display (e.g., error, success)
+    pub message: Option<(String, Instant)>,
 }
 
 impl OmnibarState {
@@ -54,6 +59,7 @@ impl OmnibarState {
             max_history,
             history_index: None,
             temp_buffer: None,
+            message: None,
         }
     }
 

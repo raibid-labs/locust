@@ -42,6 +42,12 @@ use ratatui::{
 };
 use std::io::{self, Stdout};
 use std::time::{Duration, SystemTime};
+use std::fs::File;
+use std::path::PathBuf;
+
+use log::{debug, error, info, LevelFilter};
+use simplelog::{CombinedLogger, Config, WriteLogger};
+use locust::ratatui_ext::LogTailer;
 
 /// Represents the different panes in the dashboard
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -155,10 +161,6 @@ struct ControlAction {
 struct Dashboard {
     /// Currently active pane
     active_pane: DashboardPane,
-    /// Whether omnibar is open
-    omnibar_open: bool,
-    /// Omnibar input buffer
-    omnibar_input: String,
     /// Simulated metrics data
     metrics: Vec<Metric>,
     /// Log entries
@@ -181,8 +183,6 @@ impl Dashboard {
     fn new() -> Self {
         Self {
             active_pane: DashboardPane::Metrics,
-            omnibar_open: false,
-            omnibar_input: String::new(),
             metrics: Self::generate_metrics(),
             logs: Self::generate_logs(),
             status: Self::generate_status(),
@@ -371,19 +371,10 @@ impl Dashboard {
 
     /// Handle keyboard input
     fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        if self.omnibar_open {
-            self.handle_omnibar_key(key);
-            return;
-        }
-
         match key {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Char('f') => {
                 // Hint mode is handled by Locust plugin
-            }
-            KeyCode::Char('/') => {
-                self.omnibar_open = true;
-                self.omnibar_input.clear();
             }
             KeyCode::Char('r') => self.update_data(),
             KeyCode::Char(c @ '1'..='4') => {
@@ -425,36 +416,6 @@ impl Dashboard {
         }
     }
 
-    /// Handle omnibar keyboard input
-    fn handle_omnibar_key(&mut self, key: KeyCode) {
-        match key {
-            KeyCode::Esc => self.omnibar_open = false,
-            KeyCode::Enter => {
-                self.process_omnibar_command();
-                self.omnibar_open = false;
-            }
-            KeyCode::Char(c) => self.omnibar_input.push(c),
-            KeyCode::Backspace => {
-                self.omnibar_input.pop();
-            }
-            _ => {}
-        }
-    }
-
-    /// Process omnibar command
-    fn process_omnibar_command(&mut self) {
-        let cmd = self.omnibar_input.trim().to_lowercase();
-        match cmd.as_str() {
-            "metrics" | "1" => self.active_pane = DashboardPane::Metrics,
-            "logs" | "2" => self.active_pane = DashboardPane::Logs,
-            "status" | "3" => self.active_pane = DashboardPane::Status,
-            "controls" | "4" => self.active_pane = DashboardPane::Controls,
-            "refresh" | "r" => self.update_data(),
-            "quit" | "q" => self.should_quit = true,
-            _ => {}
-        }
-    }
-
     /// Execute a control action
     fn execute_control(&mut self, index: usize) {
         if let Some(control) = self.controls.get(index) {
@@ -482,17 +443,21 @@ impl Dashboard {
     }
 
     /// Render the dashboard UI
-    fn draw(&self, f: &mut Frame, locust: &mut Locust<CrosstermBackend<Stdout>>) {
+    fn draw(&self, f: &mut Frame, locust: &mut Locust<CrosstermBackend<Stdout>>, log_tailer: &mut LogTailer, target_builder: &mut TargetBuilder) {
         let size = f.area();
 
-        // Main layout: tabs + content
+        // Main layout: tabs + content + log
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(0)])
+            .constraints([
+                Constraint::Length(3), // Tabs
+                Constraint::Min(0),    // Content
+                Constraint::Length(12), // Log pane
+            ])
             .split(size);
 
         // Render tabs
-        self.draw_tabs(f, chunks[0]);
+        self.draw_tabs(f, chunks[0], locust, target_builder);
 
         // Content layout: 2x2 grid
         let content_chunks = Layout::default()
@@ -511,21 +476,19 @@ impl Dashboard {
             .split(content_chunks[1]);
 
         // Render each pane
-        self.draw_metrics(f, top_chunks[0]);
-        self.draw_logs(f, top_chunks[1]);
-        self.draw_status(f, bottom_chunks[0]);
-        self.draw_controls(f, bottom_chunks[1]);
+        self.draw_metrics(f, top_chunks[0], locust, target_builder);
+        self.draw_logs(f, top_chunks[1], locust, target_builder);
+        self.draw_status(f, bottom_chunks[0], locust, target_builder);
+        self.draw_controls(f, bottom_chunks[1], locust, target_builder);
 
-        // Render omnibar if open
-        if self.omnibar_open {
-            self.draw_omnibar(f, size);
-        }
+        // Render Log Tailer
+        f.render_widget(log_tailer, chunks[2]);
 
         // Let Locust render overlays (hints, tooltips, etc.)
         locust.render_overlay(f);
     }
 
-    fn draw_tabs(&self, f: &mut Frame, area: Rect) {
+    fn draw_tabs(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let panes = DashboardPane::all();
         let titles: Vec<Line> = panes
             .iter()
@@ -556,9 +519,37 @@ impl Dashboard {
             );
 
         f.render_widget(tabs, area);
+
+        // Register NavTargets for tabs
+        let tab_width = area.width / panes.len() as u16;
+        for (i, pane) in panes.iter().enumerate() {
+            let tab_rect = Rect::new(
+                area.x + i as u16 * tab_width,
+                area.y,
+                tab_width,
+                area.height,
+            );
+            locust.ctx.targets.register(
+                target_builder.custom(tab_rect, format!("Tab: {}", pane.title()), TargetAction::Activate, TargetPriority::Normal)
+            );
+        }
+
+        // Register NavTargets for tabs
+        let tab_width = area.width / panes.len() as u16;
+        for (i, pane) in panes.iter().enumerate() {
+            let tab_rect = Rect::new(
+                area.x + i as u16 * tab_width,
+                area.y,
+                tab_width,
+                area.height,
+            );
+            locust.ctx.targets.register(
+                target_builder.custom(tab_rect, format!("Tab: {}", pane.title()), TargetAction::Activate, TargetPriority::Normal)
+            );
+        }
     }
 
-    fn draw_metrics(&self, f: &mut Frame, area: Rect) {
+    fn draw_metrics(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let is_active = self.active_pane == DashboardPane::Metrics;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
@@ -610,9 +601,26 @@ impl Dashboard {
         );
 
         f.render_widget(table, area);
+
+        // Register NavTargets for metrics
+        if is_active {
+            let row_height = 1; // Assuming each row is 1 unit high
+            let header_height = 2; // Assuming header is 2 units high
+            for (i, metric) in self.metrics.iter().enumerate() {
+                let item_rect = Rect::new(
+                    area.x,
+                    area.y + header_height + i as u16 * row_height,
+                    area.width,
+                    row_height,
+                );
+                locust.ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Metric: {}", metric.name))
+                );
+            }
+        }
     }
 
-    fn draw_logs(&self, f: &mut Frame, area: Rect) {
+    fn draw_logs(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let is_active = self.active_pane == DashboardPane::Logs;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
@@ -649,10 +657,25 @@ impl Dashboard {
                 .title(format!(" Logs ({}/{}) ", self.log_scroll, self.logs.len())),
         );
 
-        f.render_widget(list, area);
+        // Register NavTargets for log entries
+        if is_active {
+            let row_height = 1; // Assuming each row is 1 unit high
+            let header_height = 2; // Assuming header is 2 units high (title + border)
+            for (i, log_entry) in self.logs.iter().skip(self.log_scroll).enumerate() {
+                let item_rect = Rect::new(
+                    area.x,
+                    area.y + header_height + i as u16 * row_height,
+                    area.width,
+                    row_height,
+                );
+                locust.ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Log: {}", log_entry.message))
+                );
+            }
+        }
     }
 
-    fn draw_status(&self, f: &mut Frame, area: Rect) {
+    fn draw_status(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let is_active = self.active_pane == DashboardPane::Status;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
@@ -724,9 +747,36 @@ impl Dashboard {
         );
 
         f.render_widget(paragraph, area);
+
+        // Register NavTargets for status items
+        if is_active {
+            let base_y = area.y + 1; // Start after the title block
+            let line_height = 1;
+
+            let status_items = vec![
+                "CPU Usage",
+                "Memory Usage",
+                "Disk Usage",
+                "Network RX",
+                "Network TX",
+                "Uptime",
+            ];
+
+            for (i, item_name) in status_items.iter().enumerate() {
+                let item_rect = Rect::new(
+                    area.x,
+                    base_y + i as u16 * line_height,
+                    area.width,
+                    line_height,
+                );
+                locust.ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Status: {}", item_name))
+                );
+            }
+        }
     }
 
-    fn draw_controls(&self, f: &mut Frame, area: Rect) {
+    fn draw_controls(&self, f: &mut Frame, area: Rect, locust: &mut Locust<CrosstermBackend<Stdout>>, target_builder: &mut TargetBuilder) {
         let is_active = self.active_pane == DashboardPane::Controls;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
@@ -771,45 +821,50 @@ impl Dashboard {
         );
 
         f.render_widget(list, area);
+
+        // Register NavTargets for control actions
+        if is_active {
+            let base_y = area.y + 1; // Start after the title block
+            let row_height = 1;
+            for (i, control) in self.controls.iter().enumerate() {
+                let item_rect = Rect::new(
+                    area.x,
+                    base_y + i as u16 * row_height,
+                    area.width,
+                    row_height,
+                );
+                locust.ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Control: {}", control.label))
+                );
+            }
+        }
     }
 
-    fn draw_omnibar(&self, f: &mut Frame, area: Rect) {
-        // Center the omnibar
-        let omnibar_area = Rect {
-            x: area.width / 4,
-            y: area.height / 2 - 2,
-            width: area.width / 2,
-            height: 3,
-        };
-
-        let text = vec![Line::from(vec![
-            Span::styled("> ", Style::default().fg(Color::Yellow)),
-            Span::raw(&self.omnibar_input),
-            Span::styled("█", Style::default().fg(Color::White)),
-        ])];
-
-        let paragraph = Paragraph::new(text).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Yellow))
-                .title(" Omnibar (metrics|logs|status|controls|refresh|quit) "),
-        );
-
-        f.render_widget(paragraph, omnibar_area);
-    }
 }
 
 /// Simple pseudo-random number generator for demo purposes
 fn rand() -> u32 {
     use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hash, Hasher};
+    use std::hash::BuildHasher;
     let state = RandomState::new();
 
     (state.hash_one(&SystemTime::now()) % 100) as u32
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logger
+    let log_file_path = PathBuf::from("locust-dashboard.log");
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Debug,
+                Config::default(),
+                File::create(&log_file_path).unwrap(),
+            ),
+        ]
+    ).unwrap();
+    debug!("Logger initialized for Dashboard.");
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -820,19 +875,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Locust instance with navigation plugin
     let mut locust = Locust::new(LocustConfig::default());
     locust.register_plugin(NavPlugin::new());
+    locust.register_plugin(OmnibarPlugin::with_config(
+        OmnibarConfig::new().with_activation_key('O'),
+    ));
 
     // Create dashboard
     let mut dashboard = Dashboard::new();
+    let mut log_tailer = LogTailer::new(log_file_path, 10); // Display last 10 log lines
+    let mut target_builder = TargetBuilder::new();
     let mut last_tick = SystemTime::now();
     let tick_rate = Duration::from_millis(250);
 
     // Main event loop
     loop {
         locust.begin_frame();
+        log_tailer.read_tail()?; // Update log tail at the beginning of each frame
 
         // Draw UI
         terminal.draw(|f| {
-            dashboard.draw(f, &mut locust);
+            dashboard.draw(f, &mut locust, &mut log_tailer, &mut target_builder);
         })?;
 
         // Handle events with timeout

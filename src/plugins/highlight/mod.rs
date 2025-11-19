@@ -240,7 +240,7 @@ impl HighlightPlugin {
 
 impl<B> LocustPlugin<B> for HighlightPlugin
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     fn id(&self) -> &'static str {
         "locust.highlight"

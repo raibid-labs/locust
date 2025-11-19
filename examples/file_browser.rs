@@ -48,6 +48,11 @@ use std::fs;
 use std::io::{self, Read, Stdout};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use std::fs::File;
+
+use log::{debug, info, LevelFilter};
+use simplelog::{CombinedLogger, Config, WriteLogger};
+use locust::ratatui_ext::LogTailer;
 
 /// Represents a node in the directory tree
 #[derive(Clone)]
@@ -72,7 +77,7 @@ struct FileEntry {
 }
 
 /// Active pane in the file browser
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum ActivePane {
     Tree,
     FileList,
@@ -111,10 +116,6 @@ struct FileBrowser {
     selected_file: usize,
     /// Active pane
     active_pane: ActivePane,
-    /// Search/filter input
-    search_input: String,
-    /// Whether search mode is active
-    search_active: bool,
     /// Show hidden files
     show_hidden: bool,
     /// Preview content
@@ -135,8 +136,6 @@ impl FileBrowser {
             selected_tree: 0,
             selected_file: 0,
             active_pane: ActivePane::FileList,
-            search_input: String::new(),
-            search_active: false,
             show_hidden: false,
             preview_content: Vec::new(),
             preview_scroll: 0,
@@ -211,15 +210,6 @@ impl FileBrowser {
                 continue;
             }
 
-            // Apply search filter
-            if !self.search_input.is_empty()
-                && !name
-                    .to_lowercase()
-                    .contains(&self.search_input.to_lowercase())
-            {
-                continue;
-            }
-
             let metadata = entry.metadata().ok();
             let size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
             let is_dir = metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false);
@@ -278,18 +268,13 @@ impl FileBrowser {
 
     /// Handle keyboard input
     fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) -> io::Result<()> {
-        if self.search_active {
-            self.handle_search_key(key)?;
-            return Ok(());
-        }
-
         match key {
-            KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char('/') => {
-                self.search_active = true;
-                self.search_input.clear();
+            KeyCode::Char('q') => {
+                info!("Quitting application.");
+                self.should_quit = true;
             }
             KeyCode::Char('h') => {
+                debug!("Toggling hidden files visibility.");
                 self.show_hidden = !self.show_hidden;
                 self.rebuild_all()?;
             }
@@ -299,6 +284,7 @@ impl FileBrowser {
                 } else {
                     self.active_pane = self.active_pane.next();
                 }
+                debug!("Switching pane to: {:?}", self.active_pane);
             }
             KeyCode::Up => self.handle_up(),
             KeyCode::Down => self.handle_down(),
@@ -310,6 +296,7 @@ impl FileBrowser {
             }
             KeyCode::Backspace => {
                 if let Some(parent) = self.current_dir.parent() {
+                    debug!("Navigating up to parent directory.");
                     let parent_path = parent.to_path_buf();
                     self.current_dir = parent_path.clone();
                     self.load_directory(&parent_path)?;
@@ -319,35 +306,6 @@ impl FileBrowser {
             _ => {}
         }
 
-        Ok(())
-    }
-
-    /// Handle search mode keyboard input
-    fn handle_search_key(&mut self, key: KeyCode) -> io::Result<()> {
-        match key {
-            KeyCode::Esc => {
-                self.search_active = false;
-                self.search_input.clear();
-                let current = self.current_dir.clone();
-                self.load_directory(&current)?;
-            }
-            KeyCode::Enter => {
-                self.search_active = false;
-                let current = self.current_dir.clone();
-                self.load_directory(&current)?;
-            }
-            KeyCode::Char(c) => {
-                self.search_input.push(c);
-                let current = self.current_dir.clone();
-                self.load_directory(&current)?;
-            }
-            KeyCode::Backspace => {
-                self.search_input.pop();
-                let current = self.current_dir.clone();
-                self.load_directory(&current)?;
-            }
-            _ => {}
-        }
         Ok(())
     }
 
@@ -400,6 +358,7 @@ impl FileBrowser {
                 {
                     if node.is_dir && node.has_children {
                         node.expanded = !node.expanded;
+                        info!("Toggling directory expansion for: {:?}", node.path);
                         true
                     } else {
                         false
@@ -415,6 +374,7 @@ impl FileBrowser {
                 if let Some(node) = self.tree_nodes.get(self.selected_tree) {
                     if node.is_dir {
                         let path = node.path.clone();
+                        info!("Navigating into directory: {:?}", path);
                         self.current_dir = path.clone();
                         self.load_directory(&path)?;
                         self.update_preview();
@@ -425,10 +385,12 @@ impl FileBrowser {
                 if let Some(entry) = self.file_entries.get(self.selected_file) {
                     if entry.is_dir {
                         let path = entry.path.clone();
+                        info!("Navigating into directory: {:?}", path);
                         self.current_dir = path.clone();
                         self.load_directory(&path)?;
                         self.update_preview();
                     } else {
+                        info!("Selected file: {:?}", entry.path);
                         self.update_preview();
                         self.active_pane = ActivePane::Preview;
                     }
@@ -454,6 +416,7 @@ impl FileBrowser {
     /// Render the file browser UI
     fn draw(&self, f: &mut Frame, locust: &mut Locust<CrosstermBackend<Stdout>>) {
         let size = f.area();
+        let mut target_builder = TargetBuilder::new();
 
         // Main layout: breadcrumb + content
         let chunks = Layout::default()
@@ -462,7 +425,7 @@ impl FileBrowser {
             .split(size);
 
         // Render breadcrumb
-        self.draw_breadcrumb(f, chunks[0]);
+        self.draw_breadcrumb(f, chunks[0], &mut locust.ctx, &mut target_builder);
 
         // Three-pane layout
         let content_chunks = Layout::default()
@@ -475,20 +438,21 @@ impl FileBrowser {
             .split(chunks[1]);
 
         // Render each pane
-        self.draw_tree(f, content_chunks[0]);
-        self.draw_file_list(f, content_chunks[1]);
-        self.draw_preview(f, content_chunks[2]);
-
-        // Render search bar if active
-        if self.search_active {
-            self.draw_search(f, size);
-        }
+        self.draw_tree(f, content_chunks[0], &mut locust.ctx, &mut target_builder);
+        self.draw_file_list(f, content_chunks[1], &mut locust.ctx, &mut target_builder);
+        self.draw_preview(f, content_chunks[2], &mut locust.ctx, &mut target_builder);
 
         // Let Locust render overlays
         locust.render_overlay(f);
     }
 
-    fn draw_breadcrumb(&self, f: &mut Frame, area: Rect) {
+    fn draw_breadcrumb(
+        &self,
+        f: &mut Frame,
+        area: Rect,
+        ctx: &mut LocustContext,
+        target_builder: &mut TargetBuilder,
+    ) {
         let path_str = self.current_dir.display().to_string();
         let text = vec![Line::from(vec![
             Span::styled(" Path: ", Style::default().add_modifier(Modifier::BOLD)),
@@ -503,15 +467,32 @@ impl FileBrowser {
         );
 
         f.render_widget(paragraph, area);
+
+        // Register NavTarget for breadcrumb
+        let target = target_builder.custom(
+            area,
+            "Breadcrumb",
+            TargetAction::Activate,
+            TargetPriority::Low,
+        );
+        ctx.targets.register(target);
     }
 
-    fn draw_tree(&self, f: &mut Frame, area: Rect) {
+    fn draw_tree(
+        &self,
+        f: &mut Frame,
+        area: Rect,
+        ctx: &mut LocustContext,
+        target_builder: &mut TargetBuilder,
+    ) {
         let is_active = self.active_pane == ActivePane::Tree;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
         } else {
             Style::default()
         };
+
+        let list_items_area = Block::default().borders(Borders::ALL).inner(area);
 
         let items: Vec<ListItem> = self
             .tree_nodes
@@ -537,6 +518,19 @@ impl FileBrowser {
                     Style::default()
                 };
 
+                let item_rect = Rect::new(
+                    list_items_area.x,
+                    list_items_area.y + idx as u16,
+                    list_items_area.width,
+                    1,
+                );
+
+                let target = target_builder.list_item(
+                    item_rect,
+                    format!("Tree Node: {}", node.name),
+                );
+                ctx.targets.register(target);
+
                 ListItem::new(Line::from(Span::styled(
                     format!("{}{}{}", indent, icon, node.name),
                     style,
@@ -555,13 +549,21 @@ impl FileBrowser {
         f.render_widget(list, area);
     }
 
-    fn draw_file_list(&self, f: &mut Frame, area: Rect) {
+    fn draw_file_list(
+        &self,
+        f: &mut Frame,
+        area: Rect,
+        ctx: &mut LocustContext,
+        target_builder: &mut TargetBuilder,
+    ) {
         let is_active = self.active_pane == ActivePane::FileList;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
         } else {
             Style::default()
         };
+
+        let list_items_area = Block::default().borders(Borders::ALL).inner(area);
 
         let items: Vec<ListItem> = self
             .file_entries
@@ -583,6 +585,19 @@ impl FileBrowser {
                     Style::default()
                 };
 
+                let item_rect = Rect::new(
+                    list_items_area.x,
+                    list_items_area.y + idx as u16,
+                    list_items_area.width,
+                    1,
+                );
+
+                let target = target_builder.list_item(
+                    item_rect,
+                    format!("File: {}", entry.name),
+                );
+                ctx.targets.register(target);
+
                 ListItem::new(Line::from(Span::styled(
                     format!("{}{}{}", icon, entry.name, size_str),
                     style,
@@ -590,11 +605,7 @@ impl FileBrowser {
             })
             .collect();
 
-        let title = if !self.search_input.is_empty() {
-            format!(" Files (filter: {}) ", self.search_input)
-        } else {
-            format!(" Files ({}) ", self.file_entries.len())
-        };
+        let title = format!(" Files ({}) ", self.file_entries.len());
 
         let list = List::new(items).block(
             Block::default()
@@ -607,7 +618,13 @@ impl FileBrowser {
         f.render_widget(list, area);
     }
 
-    fn draw_preview(&self, f: &mut Frame, area: Rect) {
+    fn draw_preview(
+        &self,
+        f: &mut Frame,
+        area: Rect,
+        ctx: &mut LocustContext,
+        target_builder: &mut TargetBuilder,
+    ) {
         let is_active = self.active_pane == ActivePane::Preview;
         let border_style = if is_active {
             Style::default().fg(Color::Yellow)
@@ -638,33 +655,17 @@ impl FileBrowser {
             .wrap(Wrap { trim: false });
 
         f.render_widget(paragraph, area);
-    }
 
-    fn draw_search(&self, f: &mut Frame, area: Rect) {
-        let search_area = Rect {
-            x: area.width / 4,
-            y: area.height / 2 - 2,
-            width: area.width / 2,
-            height: 3,
-        };
-
-        let text = vec![Line::from(vec![
-            Span::styled("Filter: ", Style::default().fg(Color::Yellow)),
-            Span::raw(&self.search_input),
-            Span::styled("█", Style::default().fg(Color::White)),
-        ])];
-
-        let paragraph = Paragraph::new(text).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::Yellow))
-                .title(" Search/Filter "),
+        // Register NavTarget for preview area
+        let target = target_builder.custom(
+            area,
+            "Preview Pane",
+            TargetAction::Activate,
+            TargetPriority::Low,
         );
-
-        f.render_widget(paragraph, search_area);
+        ctx.targets.register(target);
     }
-}
+} // This closes the impl FileBrowser block
 
 /// Format file size in human-readable format
 fn format_size(bytes: u64) -> String {
@@ -681,6 +682,19 @@ fn format_size(bytes: u64) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logger
+    let log_file_path = PathBuf::from("locust.log");
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Debug,
+                Config::default(),
+                File::create(&log_file_path).unwrap(),
+            ),
+        ]
+    ).unwrap();
+    debug!("Logger initialized.");
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -689,19 +703,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create Locust instance with navigation plugin
-    let mut locust = Locust::new(LocustConfig::default());
+    let mut locust = Locust::<CrosstermBackend<Stdout>>::new(LocustConfig::default());
     locust.register_plugin(NavPlugin::new());
+    locust.register_plugin(OmnibarPlugin::with_config(
+        OmnibarConfig::new().with_activation_key('O'),
+    ));
 
     // Create file browser
     let mut browser = FileBrowser::new()?;
 
+    let mut log_tailer = LogTailer::new(log_file_path, 10); // Display last 10 log lines
+
     // Main event loop
     loop {
+        log_tailer.read_tail()?; // Update log tail at the beginning of each frame
         locust.begin_frame();
 
         // Draw UI
         terminal.draw(|f| {
-            browser.draw(f, &mut locust);
+            let size = f.area();
+            let mut target_builder = TargetBuilder::new();
+
+            // Main layout: breadcrumb + content + log
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(12)])
+                .split(size);
+
+            let breadcrumb_area = chunks[0];
+            let app_area = chunks[1];
+            let log_area = chunks[2];
+
+            // Render breadcrumb
+            browser.draw_breadcrumb(f, breadcrumb_area, &mut locust.ctx, &mut target_builder);
+
+            // Three-pane layout for app content
+            let content_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(25),
+                    Constraint::Percentage(35),
+                    Constraint::Percentage(40),
+                ])
+                .split(app_area);
+
+            // Render each pane
+            browser.draw_tree(f, content_chunks[0], &mut locust.ctx, &mut target_builder);
+            browser.draw_file_list(f, content_chunks[1], &mut locust.ctx, &mut target_builder);
+            browser.draw_preview(f, content_chunks[2], &mut locust.ctx, &mut target_builder);
+
+            // Render Log Tailer
+            f.render_widget(&mut log_tailer, log_area);
+
+            // Let Locust render overlays
+            locust.render_overlay(f);
         })?;
 
         // Handle events

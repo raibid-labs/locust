@@ -31,6 +31,9 @@ pub struct NavConfig {
     /// Style for dimmed hints (when other hints are being matched).
     pub hint_dimmed_style: Style,
 
+    /// Style for the hint mode banner.
+    pub banner_style: Style,
+
     /// Whether to show hint labels when no targets are visible.
     pub show_empty_hints: bool,
 
@@ -64,6 +67,10 @@ impl Default for NavConfig {
                 .bg(Color::Gray)
                 .fg(Color::DarkGray)
                 .add_modifier(Modifier::DIM),
+            banner_style: Style::default()
+                .bg(Color::Blue)
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
             show_empty_hints: false,
             min_target_area: 1,
             max_hints: 0,
@@ -116,6 +123,12 @@ impl NavConfig {
     /// Sets the dimmed hint style.
     pub fn with_dimmed_style(mut self, style: Style) -> Self {
         self.hint_dimmed_style = style;
+        self
+    }
+
+    /// Sets the banner style.
+    pub fn with_banner_style(mut self, style: Style) -> Self {
+        self.banner_style = style;
         self
     }
 

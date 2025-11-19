@@ -249,7 +249,7 @@ impl TooltipPlugin {
 
 impl<B> LocustPlugin<B> for TooltipPlugin
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     fn id(&self) -> &'static str {
         "locust.tooltip"

@@ -48,6 +48,7 @@ use render::OmnibarRenderer;
 use state::OmnibarState;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 /// Command palette plugin for quick command execution.
 ///
@@ -228,6 +229,7 @@ impl OmnibarPlugin {
 
     /// Deactivates the omnibar.
     fn deactivate(&mut self) {
+        log::info!("Omnibar: Deactivating.");
         self.state.deactivate();
     }
 
@@ -237,6 +239,7 @@ impl OmnibarPlugin {
     /// Special handling for clear-history command to clear the omnibar's history.
     fn handle_submit(&mut self, ctx: &mut LocustContext) {
         if let Some(command_name) = self.state.submit() {
+            log::info!("Omnibar: Command submitted: '{}'", command_name);
             // Special case: clear-history command
             if command_name == "clear-history" || command_name == "clear" || command_name == "ch" {
                 self.state.clear_history();
@@ -246,17 +249,22 @@ impl OmnibarPlugin {
             if let Ok(registry) = self.registry.lock() {
                 match registry.execute(&command_name, ctx) {
                     Ok(()) => {
-                        // Command executed successfully
+                        log::info!("Omnibar: Command '{}' executed successfully.", command_name);
                     }
                     Err(err) => {
-                        eprintln!("Locust Omnibar Error: {}", err);
+                        log::error!("Locust Omnibar Error: {}", err);
+                        self.state.message = Some((format!("Error: {}", err), Instant::now()));
                     }
                 }
             } else {
-                eprintln!("Locust Omnibar Error: Failed to access command registry");
+                let err_msg = "Failed to access command registry".to_string();
+                log::error!("Locust Omnibar Error: {}", err_msg);
+                self.state.message = Some((format!("Error: {}", err_msg), Instant::now()));
             }
+            self.deactivate(); // Deactivate after command submission
         } else {
             // Empty input - just deactivate
+            log::info!("Omnibar: Empty command submitted, deactivating.");
             self.deactivate();
         }
     }
@@ -264,7 +272,7 @@ impl OmnibarPlugin {
 
 impl<B> LocustPlugin<B> for OmnibarPlugin
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     fn id(&self) -> &'static str {
         "locust.omnibar"
@@ -279,6 +287,16 @@ where
     }
 
     fn on_event(&mut self, event: &Event, ctx: &mut LocustContext) -> PluginEventResult {
+        // Dismiss message if expired
+        if let Some((_, timestamp)) = &self.state.message {
+            if timestamp.elapsed() > std::time::Duration::from_secs(3) {
+                self.state.message = None;
+                if self.state.is_active() {
+                    return PluginEventResult::ConsumedRequestRedraw;
+                }
+            }
+        }
+
         if let Event::Key(KeyEvent {
             code, modifiers, ..
         }) = event
@@ -286,7 +304,7 @@ where
             match (self.state.mode(), code, modifiers) {
                 // Inactive: activate on configured key
                 (OmnibarMode::Inactive, KeyCode::Char(c), m)
-                    if *c == self.config.activation_key && *m == KeyModifiers::NONE =>
+                    if *c == self.config.activation_key && (*m == KeyModifiers::NONE || (*c == 'O' && *m == KeyModifiers::SHIFT)) =>
                 {
                     self.activate(ctx);
                     return PluginEventResult::ConsumedRequestRedraw;

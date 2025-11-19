@@ -3,6 +3,7 @@ use crate::core::input::PluginEventResult;
 use crossterm::event::Event;
 use ratatui::backend::Backend;
 use ratatui::Frame;
+use std::any::Any;
 
 /// Trait implemented by all Locust plugins.
 ///
@@ -67,9 +68,9 @@ use ratatui::Frame;
 ///     }
 /// }
 /// ```
-pub trait LocustPlugin<B>
+pub trait LocustPlugin<B>: Any + 'static
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     /// Stable, unique identifier for the plugin.
     ///

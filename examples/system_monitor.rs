@@ -33,11 +33,14 @@ mod common;
 
 use chrono::Local;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers, EnableMouseCapture, DisableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use locust::{HighlightConfig, HighlightPlugin, Locust, NavPlugin, OmnibarPlugin, TooltipPlugin};
+use locust::{Locust, LocustConfig, LocustContext};
+use locust::core::config::HighlightConfig;
+use locust::prelude::{HighlightPlugin, NavPlugin, OmnibarPlugin, TargetAction, TargetBuilder, TargetPriority, TooltipPlugin};
+use locust::plugins::omnibar::OmnibarConfig;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -52,7 +55,13 @@ use std::{
     collections::VecDeque,
     io::{self, Stdout},
     time::{Duration, Instant},
+    fs::File,
+    path::PathBuf,
 };
+
+use log::{debug, info, LevelFilter};
+use simplelog::{CombinedLogger, Config, WriteLogger};
+use locust::ratatui_ext::LogTailer;
 
 use common::mock::{generate_processes, Process, ProcessStatus};
 
@@ -76,8 +85,6 @@ struct SystemMonitor {
     sort_ascending: bool,
     /// Resource alerts
     alerts: Vec<Alert>,
-    /// Locust integration
-    locust: Locust<CrosstermBackend<Stdout>>,
     /// Current view mode
     view_mode: ViewMode,
     /// Search/filter query
@@ -178,28 +185,7 @@ enum ViewMode {
 }
 
 impl SystemMonitor {
-    fn new(terminal: Terminal<CrosstermBackend<Stdout>>) -> io::Result<Self> {
-        let mut locust = Locust::new(terminal);
-
-        // Initialize plugins
-        locust.add_plugin(NavPlugin::default());
-        locust.add_plugin(OmnibarPlugin::default());
-        locust.add_plugin(TooltipPlugin::default());
-
-        let highlight_config = HighlightConfig {
-            steps: vec![
-                "Welcome to System Monitor! Press 'n' to continue.".to_string(),
-                "View real-time CPU and memory graphs in the overview".to_string(),
-                "Press Tab to switch to process list view".to_string(),
-                "Sort processes by clicking column headers or using Ctrl+P".to_string(),
-                "Kill processes with Ctrl+K (select with 'f' for hints)".to_string(),
-                "Set alerts with 'set alert cpu 80' in command palette".to_string(),
-            ],
-            highlight_color: Color::Yellow,
-            text_color: Color::White,
-        };
-        locust.add_plugin(HighlightPlugin::new(highlight_config));
-
+    fn new() -> io::Result<Self> {
         let num_cores = 4;
         let mut cpu_history = VecDeque::new();
         let mut mem_history = VecDeque::new();
@@ -234,7 +220,6 @@ impl SystemMonitor {
             sort_by: ProcessSortKey::Cpu,
             sort_ascending: false,
             alerts: Vec::new(),
-            locust,
             view_mode: ViewMode::Overview,
             filter_query: String::new(),
             num_cores,
@@ -246,20 +231,26 @@ impl SystemMonitor {
         })
     }
 
-    fn run(&mut self) -> io::Result<()> {
+    fn run(
+        &mut self,
+        locust: &mut Locust<CrosstermBackend<Stdout>>,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        log_tailer: &mut LogTailer,
+    ) -> io::Result<()> {
         let tick_rate = Duration::from_millis(16); // ~60 FPS
         let update_rate = Duration::from_millis(1000); // Update stats every second
         let mut last_tick = Instant::now();
         let mut last_update = Instant::now();
 
         loop {
+            log_tailer.read_tail()?; // Update log tail at the beginning of each frame
             self.fps_counter.tick();
-            self.draw()?;
+            self.draw(locust, terminal, log_tailer)?;
 
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
             if event::poll(timeout)? {
                 if let Event::Key(key) = event::read()? {
-                    if self.handle_input(key)? {
+                    if self.handle_input(locust, key)? {
                         break;
                     }
                 }
@@ -278,7 +269,11 @@ impl SystemMonitor {
         Ok(())
     }
 
-    fn handle_input(&mut self, key: KeyEvent) -> io::Result<bool> {
+    fn handle_input(
+        &mut self,
+        locust: &mut Locust<CrosstermBackend<Stdout>>,
+        key: KeyEvent,
+    ) -> io::Result<bool> {
         // Tour handling
         if self.tour_active {
             if key.code == KeyCode::Char('n') {
@@ -293,11 +288,17 @@ impl SystemMonitor {
             }
         }
 
+        // Pass event to Locust plugins first
+        let outcome = locust.on_event(&Event::Key(key));
+        if outcome.consumed {
+            return Ok(false); // Event consumed by a plugin
+        }
+
         // Global commands
         match (key.modifiers, key.code) {
             (KeyModifiers::CONTROL, KeyCode::Char('c')) => return Ok(true),
             (KeyModifiers::CONTROL, KeyCode::Char('p')) => {
-                self.locust.omnibar_mut().toggle();
+                // Omnibar plugin will handle this event
                 return Ok(false);
             }
             (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
@@ -322,11 +323,6 @@ impl SystemMonitor {
             _ => {}
         }
 
-        // Command palette mode
-        if self.locust.omnibar().is_active() {
-            return self.handle_omnibar_input(key);
-        }
-
         // View-specific controls
         match self.view_mode {
             ViewMode::Overview => {}
@@ -337,26 +333,7 @@ impl SystemMonitor {
         Ok(false)
     }
 
-    fn handle_omnibar_input(&mut self, key: KeyEvent) -> io::Result<bool> {
-        match key.code {
-            KeyCode::Esc => {
-                self.locust.omnibar_mut().toggle();
-            }
-            KeyCode::Enter => {
-                let query = self.locust.omnibar().query().to_string();
-                self.execute_command(&query);
-                self.locust.omnibar_mut().toggle();
-            }
-            KeyCode::Char(c) => {
-                self.locust.omnibar_mut().push_char(c);
-            }
-            KeyCode::Backspace => {
-                self.locust.omnibar_mut().pop_char();
-            }
-            _ => {}
-        }
-        Ok(false)
-    }
+
 
     fn handle_processes_input(&mut self, key: KeyEvent) {
         match key.code {
@@ -521,22 +498,27 @@ impl SystemMonitor {
         }
 
         // Update memory history
-        let mem_percent = 50.0 + rng.gen_range(-5.0..5.0);
+        let mem_percent: f32 = 50.0 + rng.gen_range(-5.0..5.0);
         self.mem_history.push_back(mem_percent.clamp(0.0, 100.0));
         if self.mem_history.len() > 60 {
             self.mem_history.pop_front();
         }
 
         // Update disk I/O
-        self.disk_io.read_bytes_sec =
-            (1024 * 1024 * 10) + rng.gen_range(-1024 * 1024..1024 * 1024 * 5);
-        self.disk_io.write_bytes_sec =
-            (1024 * 1024 * 5) + rng.gen_range(-1024 * 1024..1024 * 1024 * 2);
+        self.disk_io.read_bytes_sec = ((1024 * 1024 * 10) as i64
+            + rng.gen_range(-1024 * 1024i64..1024 * 1024 * 5))
+            .max(0) as u64;
+        self.disk_io.write_bytes_sec = ((1024 * 1024 * 5) as i64
+            + rng.gen_range(-1024 * 1024i64..1024 * 1024 * 2))
+            .max(0) as u64;
 
         // Update network I/O
-        self.network_io.rx_bytes_sec =
-            (1024 * 1024 * 2) + rng.gen_range(-1024 * 512..1024 * 1024);
-        self.network_io.tx_bytes_sec = (1024 * 512) + rng.gen_range(-1024 * 256..1024 * 512);
+        self.network_io.rx_bytes_sec = ((1024 * 1024 * 2) as i64
+            + rng.gen_range(-1024 * 512i64..1024 * 1024))
+            .max(0) as u64;
+        self.network_io.tx_bytes_sec = ((1024 * 512) as i64
+            + rng.gen_range(-1024 * 256i64..1024 * 512))
+            .max(0) as u64;
 
         // Randomly update process stats
         for process in &mut self.processes {
@@ -578,29 +560,51 @@ impl SystemMonitor {
         }
     }
 
-    fn draw(&mut self) -> io::Result<()> {
-        self.locust.terminal_mut().draw(|f| {
-            let area = f.area();
+    fn draw(
+        &mut self,
+        locust: &mut Locust<CrosstermBackend<Stdout>>,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+        log_tailer: &mut LogTailer,
+    ) -> io::Result<()> {
+        terminal.draw(|f| {
+            let size = f.area();
+
+            let main_layout_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(0), Constraint::Length(12)]) // Added space for log pane
+                .split(size);
+
+            let app_area = main_layout_chunks[0];
+            let log_area = main_layout_chunks[1];
+
+            let ctx = &mut locust.ctx;
+            let mut target_builder = TargetBuilder::new();
 
             match self.view_mode {
-                ViewMode::Overview => self.draw_overview(f, area),
-                ViewMode::Processes => self.draw_processes(f, area),
-                ViewMode::Alerts => self.draw_alerts(f, area),
+                ViewMode::Overview => self.draw_overview(f, app_area, ctx, &mut target_builder),
+                ViewMode::Processes => self.draw_processes(f, app_area, ctx, &mut target_builder),
+                ViewMode::Alerts => self.draw_alerts(f, app_area, ctx, &mut target_builder),
             }
 
             // Draw status bar
-            self.draw_status_bar(f, area);
+            self.draw_status_bar(f, app_area, ctx, &mut target_builder);
 
             // Draw tour if active
             if self.tour_active {
-                self.draw_tour(f, area);
+                self.draw_tour(f, app_area, ctx, &mut target_builder);
             }
+
+            // Render Log Tailer
+            f.render_widget(log_tailer, log_area);
+
+            // Let Locust render overlays
+            locust.render_overlay(f);
         })?;
 
         Ok(())
     }
 
-    fn draw_overview(&self, f: &mut Frame, area: Rect) {
+    fn draw_overview(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -616,8 +620,8 @@ impl SystemMonitor {
             .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
             .split(chunks[0]);
 
-        self.draw_cpu_graph(f, top_chunks[0]);
-        self.draw_memory_info(f, top_chunks[1]);
+        self.draw_cpu_graph(f, top_chunks[0], ctx, target_builder);
+        self.draw_memory_info(f, top_chunks[1], ctx, target_builder);
 
         // Disk and Network I/O
         let middle_chunks = Layout::default()
@@ -625,14 +629,18 @@ impl SystemMonitor {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(chunks[1]);
 
-        self.draw_disk_io(f, middle_chunks[0]);
-        self.draw_network_io(f, middle_chunks[1]);
+        self.draw_disk_io(f, middle_chunks[0], ctx, target_builder);
+        self.draw_network_io(f, middle_chunks[1], ctx, target_builder);
 
         // Recent alerts
-        self.draw_recent_alerts(f, chunks[2]);
+        self.draw_recent_alerts(f, chunks[2], ctx, target_builder);
+
+        // Register NavTarget for overview area
+        ctx.targets
+            .register(target_builder.custom(area, "Overview Area", TargetAction::Activate, TargetPriority::Low));
     }
 
-    fn draw_cpu_graph(&self, f: &mut Frame, area: Rect) {
+    fn draw_cpu_graph(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title(format!(" CPU Usage ({} cores) ", self.num_cores));
@@ -646,40 +654,50 @@ impl SystemMonitor {
 
         // Create datasets for each core
         let colors = [Color::Cyan, Color::Green, Color::Yellow, Color::Magenta];
-        let datasets: Vec<Dataset> = (0..self.num_cores)
+        let all_cpu_data: Vec<Vec<(f64, f64)>> = (0..self.num_cores)
             .map(|core_idx| {
-                let data: Vec<(f64, f64)> = self
-                    .cpu_history
+                self.cpu_history
                     .iter()
                     .enumerate()
                     .map(|(i, cores)| (i as f64, cores[core_idx] as f64))
-                    .collect();
+                    .collect()
+            })
+            .collect();
 
+        let datasets: Vec<Dataset> = all_cpu_data
+            .iter()
+            .enumerate()
+            .map(|(core_idx, data)| {
                 Dataset::default()
                     .name(format!("Core {}", core_idx))
                     .marker(ratatui::symbols::Marker::Braille)
                     .graph_type(GraphType::Line)
                     .style(Style::default().fg(colors[core_idx % colors.len()]))
-                    .data(&data)
+                    .data(data.as_slice())
             })
             .collect();
 
         let chart = Chart::new(datasets)
             .x_axis(Axis::default().bounds([0.0, 60.0]).labels(vec![
-                "0s".into(),
-                "30s".into(),
-                "60s".into(),
+                Line::from("0s"),
+                Line::from("30s"),
+                Line::from("60s"),
             ]))
             .y_axis(Axis::default().bounds([0.0, 100.0]).labels(vec![
-                "0%".into(),
-                "50%".into(),
-                "100%".into(),
+                Line::from("0%"),
+                Line::from("50%"),
+                Line::from("100%"),
             ]));
 
         f.render_widget(chart, inner);
+
+        // Register NavTarget for the CPU graph area
+        ctx.targets.register(
+            target_builder.custom(area, "CPU Graph", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_memory_info(&self, f: &mut Frame, area: Rect) {
+    fn draw_memory_info(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default().borders(Borders::ALL).title(" Memory ");
 
         let inner = block.inner(area);
@@ -720,9 +738,14 @@ impl SystemMonitor {
 
         let paragraph = Paragraph::new(lines).alignment(Alignment::Left);
         f.render_widget(paragraph, inner);
+
+        // Register NavTarget for the Memory info area
+        ctx.targets.register(
+            target_builder.custom(area, "Memory Info", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_disk_io(&self, f: &mut Frame, area: Rect) {
+    fn draw_disk_io(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default().borders(Borders::ALL).title(" Disk I/O ");
 
         let inner = block.inner(area);
@@ -759,9 +782,14 @@ impl SystemMonitor {
 
         let paragraph = Paragraph::new(lines);
         f.render_widget(paragraph, inner);
+
+        // Register NavTarget for the Disk I/O area
+        ctx.targets.register(
+            target_builder.custom(area, "Disk I/O", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_network_io(&self, f: &mut Frame, area: Rect) {
+    fn draw_network_io(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title(" Network I/O ");
@@ -797,9 +825,14 @@ impl SystemMonitor {
 
         let paragraph = Paragraph::new(lines);
         f.render_widget(paragraph, inner);
+
+        // Register NavTarget for the Network I/O area
+        ctx.targets.register(
+            target_builder.custom(area, "Network I/O", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_recent_alerts(&self, f: &mut Frame, area: Rect) {
+    fn draw_recent_alerts(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title(" Recent Alerts ");
@@ -809,7 +842,8 @@ impl SystemMonitor {
             .iter()
             .rev()
             .take(5)
-            .map(|alert| {
+            .enumerate() // Add enumerate to get index for target_builder.list_item
+            .map(|(idx, alert)| {
                 let line = Line::from(vec![
                     Span::raw(alert.alert_type.icon()),
                     Span::raw(" "),
@@ -822,15 +856,32 @@ impl SystemMonitor {
                         Style::default().fg(alert.alert_type.color()),
                     ),
                 ]);
-                ListItem::new(line)
+                let item = ListItem::new(line);
+
+                // Register NavTarget for each alert item
+                let item_rect = Rect::new(
+                    area.x + 1, // Adjust for border
+                    area.y + 1 + idx as u16, // Adjust for border and item index
+                    area.width.saturating_sub(2), // Adjust for border
+                    1,
+                );
+                ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Alert: {}", alert.message))
+                );
+                item
             })
             .collect();
 
         let list = List::new(items).block(block);
         f.render_widget(list, area);
+
+        // Register NavTarget for the overall Recent Alerts area
+        ctx.targets.register(
+            target_builder.custom(area, "Recent Alerts", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_processes(&mut self, f: &mut Frame, area: Rect) {
+    fn draw_processes(&mut self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default().borders(Borders::ALL).title(format!(
             " Processes ({} total) - Sort by: {} ",
             self.processes.len(),
@@ -853,7 +904,8 @@ impl SystemMonitor {
         let items: Vec<ListItem> = self
             .processes
             .iter()
-            .map(|process| {
+            .enumerate()
+            .map(|(idx, process)| {
                 let mem_mb = process.mem_bytes as f64 / 1024.0 / 1024.0;
                 let line = format!(
                     "{:6} {:<15} {:>5.1}% {:>7.1}M  {}",
@@ -867,7 +919,19 @@ impl SystemMonitor {
                     mem_mb,
                     process.status.as_str()
                 );
-                ListItem::new(line)
+                let item = ListItem::new(line);
+
+                // Register NavTarget for each process item
+                let item_rect = Rect::new(
+                    area.x + 1, // Adjust for border
+                    area.y + 1 + idx as u16, // Adjust for border and item index
+                    area.width.saturating_sub(2), // Adjust for border
+                    1,
+                );
+                ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Process: {}", process.name))
+                );
+                item
             })
             .collect();
 
@@ -881,9 +945,14 @@ impl SystemMonitor {
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, area, &mut self.process_state);
+
+        // Register NavTarget for the overall Processes area
+        ctx.targets.register(
+            target_builder.custom(area, "Process List", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_alerts(&self, f: &mut Frame, area: Rect) {
+    fn draw_alerts(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title(format!(" Alerts ({}) ", self.alerts.len()));
@@ -892,7 +961,8 @@ impl SystemMonitor {
             .alerts
             .iter()
             .rev()
-            .map(|alert| {
+            .enumerate()
+            .map(|(idx, alert)| {
                 let lines = vec![
                     Line::from(vec![
                         Span::raw(alert.alert_type.icon()),
@@ -908,15 +978,32 @@ impl SystemMonitor {
                     )),
                     Line::from(""),
                 ];
-                ListItem::new(lines)
+                let item = ListItem::new(lines);
+
+                // Register NavTarget for each alert item
+                let item_rect = Rect::new(
+                    area.x + 1, // Adjust for border
+                    area.y + 1 + idx as u16 * 3, // Adjust for border and item index (each alert is 3 lines)
+                    area.width.saturating_sub(2), // Adjust for border
+                    3, // Each alert item takes 3 lines
+                );
+                ctx.targets.register(
+                    target_builder.list_item(item_rect, format!("Alert: {}", alert.message))
+                );
+                item
             })
             .collect();
 
         let list = List::new(items).block(block);
         f.render_widget(list, area);
+
+        // Register NavTarget for the overall Alerts area
+        ctx.targets.register(
+            target_builder.custom(area, "Alerts List", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_status_bar(&self, f: &mut Frame, area: Rect) {
+    fn draw_status_bar(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let status_area = Rect {
             x: area.x,
             y: area.y + area.height - 1,
@@ -939,9 +1026,14 @@ impl SystemMonitor {
             .style(Style::default().bg(Color::DarkGray).fg(Color::White));
 
         f.render_widget(status_widget, status_area);
+
+        // Register NavTarget for the status bar area
+        ctx.targets.register(
+            target_builder.custom(status_area, "Status Bar", TargetAction::Activate, TargetPriority::Low)
+        );
     }
 
-    fn draw_tour(&self, f: &mut Frame, area: Rect) {
+    fn draw_tour(&self, f: &mut Frame, area: Rect, ctx: &mut LocustContext, target_builder: &mut TargetBuilder) {
         let messages = [
             "Welcome to System Monitor! Press 'n' to continue.",
             "View real-time CPU and memory graphs in the overview",
@@ -966,21 +1058,53 @@ impl SystemMonitor {
             .wrap(Wrap { trim: true });
 
         f.render_widget(tour_widget, popup_area);
+
+        // Register NavTarget for the tour popup area
+        ctx.targets.register(
+            target_builder.custom(popup_area, "Tour Popup", TargetAction::Activate, TargetPriority::High)
+        );
     }
 }
 
-fn main() -> io::Result<()> {
-    enable_raw_mode()?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logger
+    let log_file_path = PathBuf::from("locust.log");
+    CombinedLogger::init(
+        vec![
+            WriteLogger::new(
+                LevelFilter::Debug,
+                Config::default(),
+                File::create(&log_file_path).unwrap(),
+            ),
+        ]
+    ).unwrap();
+    debug!("Logger initialized for System Monitor.");
+
+    // Setup terminal
+    terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
 
-    let mut app = SystemMonitor::new(terminal)?;
-    let result = app.run();
+    // Create Locust instance and register plugins
+    let mut locust = Locust::new(LocustConfig::default());
+    locust.register_plugin(NavPlugin::default());
+    locust.register_plugin(OmnibarPlugin::with_config(OmnibarConfig::new().with_activation_key('O')));
+    locust.register_plugin(TooltipPlugin::default());
+    locust.register_plugin(HighlightPlugin::new());
 
-    disable_raw_mode()?;
-    execute!(io::stdout(), LeaveAlternateScreen)?;
+    // Create file browser
+    let mut app = SystemMonitor::new()?;
+    let mut log_tailer = LogTailer::new(log_file_path, 10); // Display last 10 log lines
+
+    let result: Result<(), Box<dyn std::error::Error>> = match app.run(&mut locust, &mut terminal, &mut log_tailer) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Box::new(e)),
+    };
+
+    terminal::disable_raw_mode()?;
+    execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
 
     result
 }

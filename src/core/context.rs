@@ -8,6 +8,10 @@ use crate::core::theme::{Theme, ThemeError};
 use crate::core::theme_manager::ThemeManager;
 use crate::plugins::tooltip::TooltipRegistry;
 use crossterm::event::Event;
+use std::any::Any;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
 use ratatui::backend::Backend;
 use ratatui::Frame;
 
@@ -132,7 +136,7 @@ impl LocustContext {
 /// Central entry point for embedding Locust into a ratatui app.
 pub struct Locust<B>
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     pub config: LocustConfig,
     pub ctx: LocustContext,
@@ -141,7 +145,7 @@ where
 
 impl<B> Locust<B>
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     /// Create a new Locust instance with optional configuration.
     ///
@@ -166,7 +170,6 @@ where
     {
         plugin.init(&mut self.ctx);
         self.plugins.push(Box::new(plugin));
-        // Sort by priority: lower numbers first
         self.plugins.sort_by_key(|p| p.priority());
     }
 
@@ -263,15 +266,29 @@ where
         Ok(())
     }
 
-    /// Gets a reference to the current configuration.
+    /// Get a reference to the current configuration.
     pub fn get_config(&self) -> Option<&Config> {
         self.ctx.config.as_ref()
+    }
+
+    /// Get an immutable reference to a registered plugin.
+    pub fn get_plugin<P: LocustPlugin<B> + 'static>(&self) -> Option<&P> {
+        self.plugins
+            .iter()
+            .find_map(|plugin| (plugin.as_ref() as &dyn Any).downcast_ref::<P>())
+    }
+
+    /// Get a mutable reference to a registered plugin.
+    pub fn get_plugin_mut<P: LocustPlugin<B> + 'static>(&mut self) -> Option<&mut P> {
+        self.plugins
+            .iter_mut()
+            .find_map(|plugin| (plugin.as_mut() as &mut dyn Any).downcast_mut::<P>())
     }
 }
 
 impl<B> Drop for Locust<B>
 where
-    B: Backend,
+    B: Backend + 'static,
 {
     fn drop(&mut self) {
         // Call cleanup on all plugins in reverse order

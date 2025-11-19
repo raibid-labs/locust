@@ -1,0 +1,16 @@
+02:18:43 [DEBUG] (1) omnibar_demo: Logger initialized for Omnibar Demo.
+02:21:13 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:15 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:15 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:15 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:15 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:15 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:16 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: false, request_redraw: false }
+02:21:17 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:18 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:18 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:18 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:18 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: true, request_redraw: true }
+02:21:21 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: false, request_redraw: false }
+02:21:23 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: false, request_redraw: false }
+02:21:23 [DEBUG] (1) omnibar_demo: Locust on_event result: LocustEventOutcome { consumed: false, request_redraw: false }

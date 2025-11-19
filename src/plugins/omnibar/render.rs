@@ -12,7 +12,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 use ratatui::Frame;
 
-/// Renderer for the Omnibar overlay.
+    /// Renderer for the Omnibar overlay.
 pub struct OmnibarRenderer;
 
 impl OmnibarRenderer {
@@ -78,8 +78,46 @@ impl OmnibarRenderer {
             // Just input field
             self.render_input(frame, inner_area, state, config);
         }
+
+        // Render message if present
+        if let Some((msg, _)) = &state.message {
+            self.render_message(frame, msg, config, popup_area);
+        }
     }
 
+    /// Renders a temporary message (e.g., error) as an overlay.
+    /// It's positioned centered horizontally, and just above the omnibar.
+    pub fn render_message(&self, frame: &mut Frame, message: &str, config: &OmnibarConfig, omnibar_area: Rect) {
+        let text_width = message.len() as u16 + 4; // Text + padding
+        let text_height = 1;
+
+        // Message box dimensions
+        let msg_width = text_width.min(frame.size().width);
+        let msg_height = text_height;
+
+        let x_pos = (frame.size().width.saturating_sub(msg_width)) / 2;
+        let y_pos = omnibar_area.y.saturating_sub(msg_height + 1); // 1 line above omnibar
+
+        let msg_area = Rect::new(x_pos, y_pos, msg_width, msg_height);
+
+        // Clear the area first
+        frame.render_widget(Clear, msg_area);
+
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(config.border_type.to_ratatui_border())
+            .border_style(Style::default().fg(Color::Red))
+            .title_style(Style::default().fg(Color::Red));
+
+        let paragraph = Paragraph::new(Line::from(Span::styled(
+            format!(" {} ", message),
+            Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+        )))
+        .alignment(Alignment::Center)
+        .block(block);
+
+        frame.render_widget(paragraph, msg_area);
+    }
     /// Calculates the centered popup area with custom height.
     fn calculate_popup_area_with_height(
         &self,
